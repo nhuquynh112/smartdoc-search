@@ -149,7 +149,7 @@ For normalized vectors, each shared term contributes `q[t] × d[t]` to the score
 
 ### Document Metadata
 
-The proposed `documents` table captures identity, provenance, storage references, and ingestion state.
+The implemented `documents` table captures identity, provenance, storage references, text and ingestion state.
 
 | Field | Purpose |
 | --- | --- |
@@ -161,7 +161,9 @@ The proposed `documents` table captures identity, provenance, storage references
 | `word_count` | Token count after segmentation and before stopword removal |
 | `source_uri` | Known provenance reference; nullable when unavailable |
 | `storage_ref` | Reference to the original file |
-| `text_ref` | Reference to processed text |
+| `text_ref` | Reference to an optional processed-text compatibility cache |
+| `raw_text` | Extracted document text stored in PostgreSQL |
+| `clean_text` | Preprocessed searchable text stored in PostgreSQL |
 | `created_at` | Time of ingestion, distinct from publication time |
 | `ingest_status` | `pending`, `ready`, or `failed` |
 | `error_message` | Reason for failed ingestion |
@@ -172,8 +174,8 @@ Source references will be recorded when known rather than inferred. SHA-256 dete
 
 | Layer | Stores |
 | --- | --- |
-| PostgreSQL | Metadata, document identity, ingestion state, and corpus revision |
-| File storage | Original files and processed text |
+| PostgreSQL | Metadata, raw text, clean text, document identity, ingestion state, and corpus revision |
+| File storage | Original files and optional processed-text caches |
 | Index artifacts | Vectorizer, sparse TF-IDF matrix, ordered ID mapping, inverted index, and version manifest |
 
 ### Consistency Rules
@@ -418,7 +420,7 @@ Ingestion serializes operations through a PostgreSQL advisory lock. Individual f
 python -m scripts.export_corpus
 ```
 
-This writes `reports/tv2_corpus.json` with ready document text, stable IDs, corpus revision and a snapshot fingerprint. TV2 can load it without PostgreSQL; follow [the handoff guide](docs/tv2_handoff.md). The export does not include original PDFs, and its storage references remain local to TV1. Per-document preprocessing versions are not yet persisted, so the current pipeline description does not certify historical record configurations. Resolve this before freezing the evaluation corpus.
+This writes `reports/tv2_corpus.json` with ready document text, stable IDs, corpus revision and a snapshot fingerprint. TV2 can load it without PostgreSQL; follow [the handoff guide](docs/tv2_handoff.md). The export does not include original PDFs, and its storage references remain local to TV1. Per-document preprocessing manifests are persisted and verified before export. See [the version lifecycle](docs/preprocessing_version.md).
 
 ## Evaluation and Verification
 
@@ -509,3 +511,30 @@ Possible extensions after the baseline is verified include OCR, near-duplicate d
 - [PostgreSQL documentation](https://www.postgresql.org/docs/)
 - [Psycopg 3 documentation](https://www.psycopg.org/psycopg3/docs/)
 - [Streamlit documentation](https://docs.streamlit.io/)
+
+### Upgrade Corpus Preprocessing
+
+```bash
+python -m scripts.init_db
+python -m scripts.reprocess_corpus
+python -m scripts.export_corpus
+```
+
+See [preprocessing version lifecycle](docs/preprocessing_version.md). Reprocessing preserves document IDs and original files; it increments corpus revision once when documents change. TV2 must rebuild after that change.
+
+### News Dataset Corpus
+
+See [news corpus preparation and import](docs/news_corpus.md). Use `python -m scripts.export_corpus --corpus vietonline_news_200 --output reports/tv2_news_corpus.json` to keep the selected news articles separate from integration fixtures.
+
+### PostgreSQL Text Storage
+
+`documents.raw_text` stores extracted text for content viewing; `documents.clean_text` stores preprocessed features for indexing. Data-service reads use PostgreSQL, not processed files. Original files remain outside the DB for download and verification. Processed files are retained as compatibility caches; historical cache cleanup is separate work.
+
+For an existing database:
+
+```bash
+python -m scripts.init_db
+python -m scripts.backfill_document_text
+```
+
+Backfill validates original hashes, copies text in one transaction and validates the ready-text constraint. IDs and corpus revision remain unchanged because indexed text is unchanged. Future preprocessing changes update DB text and metadata in one transaction and increment revision. Original file writes still require cross-storage failure handling. A DB backup now includes searchable text; original-file downloads require transferring the storage folder separately.

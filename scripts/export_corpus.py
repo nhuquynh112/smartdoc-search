@@ -27,8 +27,9 @@ def validate_snapshot(snapshot):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, default=PROJECT_ROOT/'reports'/'tv2_corpus.json')
+    parser.add_argument('--corpus', help='Export only the named corpus.')
     args = parser.parse_args()
-    snapshot = load_corpus_snapshot()
+    snapshot = load_corpus_snapshot(args.corpus)
     validate_snapshot(snapshot)
     canonical = json.dumps(snapshot, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf-8')
     payload = {
@@ -36,12 +37,8 @@ def main():
         'exported_at_utc': datetime.now(timezone.utc).isoformat(),
         'snapshot_sha256': hashlib.sha256(canonical).hexdigest(),
         'document_count': len(snapshot['documents']),
-        'current_pipeline': {
-            'tokenizer': 'underthesea', 'version': version('underthesea'),
-            'unicode': 'NFC', 'lowercase': True, 'segment_words': True,
-            'remove_stopwords': False,
-        },
-        'preprocessing_provenance': 'Per-document pipeline versions are not recorded; current_pipeline describes current code, not verified historical processing of every record.',
+        'current_pipeline': snapshot['preprocessing'],
+        'preprocessing_provenance': 'All ready records verified against the current fingerprint before export.',
         **snapshot,
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)

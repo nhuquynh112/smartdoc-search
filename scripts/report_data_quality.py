@@ -26,11 +26,16 @@ def main():
     args.output_dir.mkdir(parents=True, exist_ok=True)
     fields = ['id','title','file_type','size_bytes','sha256','word_count','source_uri','source_status',
               'storage_ref','text_ref','created_at','ingest_status','error_message',
-              'observed_token_count','storage_check','quality_issues']
+              'observed_token_count','storage_check','quality_issues',
+              'preprocessing_version','preprocessing_config','processed_at','corpus_name','category','dataset_id']
     csv_path = args.output_dir/'data_quality_report.csv'
     with csv_path.open('w', encoding='utf-8-sig', newline='') as handle:
         writer = csv.DictWriter(handle, fieldnames=fields)
-        writer.writeheader(); writer.writerows(rows)
+        writer.writeheader()
+        for row in rows:
+            entry = dict(row)
+            entry['preprocessing_config'] = json.dumps(entry['preprocessing_config'], ensure_ascii=False, sort_keys=True)
+            writer.writerow(entry)
     json_path = args.output_dir/'data_quality_summary.json'
     json_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     print(f"Ready: {summary['ready_documents']}; records: {summary['total_records']}")

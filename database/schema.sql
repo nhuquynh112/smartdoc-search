@@ -14,10 +14,15 @@ CREATE TABLE IF NOT EXISTS documents (
     source_uri text,
     storage_ref text,
     text_ref text,
+    raw_text text,
+    clean_text text,
     created_at timestamptz NOT NULL DEFAULT now(),
     ingest_status text NOT NULL DEFAULT 'pending'
         CHECK (ingest_status IN ('pending', 'ready', 'failed')),
     error_message text,
+    preprocessing_version text,
+    preprocessing_config jsonb,
+    processed_at timestamptz,
     CHECK (ingest_status <> 'ready' OR
         (storage_ref IS NOT NULL AND text_ref IS NOT NULL AND word_count IS NOT NULL))
 );

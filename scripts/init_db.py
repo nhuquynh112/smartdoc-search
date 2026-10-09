@@ -6,6 +6,8 @@ def main():
     schema = (PROJECT_ROOT / 'database' / 'schema.sql').read_text(encoding='utf-8')
     with connect() as conn:
         conn.execute(schema)
+        for migration in sorted((PROJECT_ROOT / "database" / "migrations").glob("*.sql")):
+            conn.execute(migration.read_text(encoding="utf-8"))
     print('Database schema initialized successfully.')
 
 if __name__ == '__main__':

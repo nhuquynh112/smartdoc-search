@@ -46,3 +46,27 @@ def preprocess_document(text: str, config: PreprocessingConfig | None = None) ->
 def preprocess_text(text: str, config: PreprocessingConfig | None = None) -> str:
     """TV2 must call this with the same config for document and query text."""
     return preprocess_document(text, config).clean_text
+
+
+def pipeline_manifest(config: PreprocessingConfig | None = None) -> dict:
+    """Fingerprint code rules and dependencies, including the actual stopword set."""
+    import hashlib
+    import json
+    import unicodedata
+    from importlib.metadata import version
+    config = config or PreprocessingConfig()
+    settings = {
+        'rules_version': 1,  # Increment when normalization/segmentation rules change.
+        'unicode': 'NFC', 'unicode_database': unicodedata.unidata_version,
+        'lowercase': True, 'sentence_boundaries': '[.!?。！？;\\n]+',
+        'segment_words': config.segment_words,
+        'tokenizer': 'underthesea' if config.segment_words else 'whitespace',
+        'underthesea_version': version('underthesea'),
+        'underthesea_core_version': version('underthesea_core'),
+        'pdf_extractor_version': version('pypdf'),
+        'fonttools_version': version('fonttools'),
+        'remove_stopwords': config.remove_stopwords,
+        'stopwords': sorted(config.stopwords) if config.remove_stopwords else [],
+    }
+    digest = hashlib.sha256(json.dumps(settings,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+    return {'fingerprint': digest, 'settings': settings}

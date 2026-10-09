@@ -5,12 +5,16 @@ from urllib.parse import urlparse
 
 
 def inspect_document(row, storage):
-    result = dict(row)
+    result = {k:v for k,v in row.items() if k not in {"raw_text", "clean_text"}}
     result['source_status'] = ('missing' if not row.get('source_uri') else
         'web' if urlparse(row['source_uri']).scheme in {'http', 'https'} else 'non_web')
     issues = []
     result['observed_token_count'] = None
     if row['ingest_status'] == 'ready':
+        if 'clean_text' in row:
+            for column in ['raw_text', 'clean_text']:
+                if not (row.get(column) or '').strip(): issues.append(f'database:{column}_empty')
+            result['observed_token_count'] = len((row.get('clean_text') or '').split())
         for field in ['storage_ref', 'text_ref']:
             ref = row.get(field)
             if not ref:
@@ -24,6 +28,7 @@ def inspect_document(row, storage):
                 else:
                     text = path.read_text(encoding='utf-8')
                     result['observed_token_count'] = len(text.split())
+                    if 'clean_text' in row and text != row['clean_text']: issues.append('processed:db_cache_mismatch')
                     if not text.strip(): issues.append('processed:empty')
                     if '\ufffd' in text: issues.append('processed:replacement_character')
             except (OSError, ValueError, UnicodeError) as exc:

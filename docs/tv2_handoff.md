@@ -5,10 +5,10 @@
 With PostgreSQL running and the virtual environment activated:
 
 ```bash
-python -m scripts.export_corpus
+python -m scripts.export_corpus --corpus vietonline_news_200 --output reports/tv2_news_corpus.json
 ```
 
-Output: `reports/tv2_corpus.json`. This generated file is ignored by Git. Share it with the team through an agreed file-sharing channel; cloning the repository does not retrieve it. Do not publish source text without checking sharing permissions.
+Output: `reports/tv2_news_corpus.json`. This generated file is ignored by Git. Share it with the team through an agreed file-sharing channel; cloning the repository does not retrieve it. Do not publish source text without checking sharing permissions.
 
 The export contains processed text and metadata for ready documents, stable IDs, the corpus revision and a snapshot fingerprint. It is not a database backup and does not contain original PDFs. Storage references refer to TV1's storage and will not resolve on another machine unless those files are transferred separately.
 
@@ -20,7 +20,7 @@ Install project requirements in a virtual environment and obtain the exported JS
 import json
 from pathlib import Path
 
-snapshot = json.loads(Path('reports/tv2_corpus.json').read_text(encoding='utf-8'))
+snapshot = json.loads(Path('reports/tv2_news_corpus.json').read_text(encoding='utf-8'))
 documents = snapshot['documents']
 document_ids = [doc['document_id'] for doc in documents]
 texts = [doc['clean_text'] for doc in documents]
@@ -51,12 +51,16 @@ This is integration guidance, not the completed TV2 engine. Build an inverted in
 
 ## Live integration
 
-When running against TV1's database/storage on the same machine, use `smartdoc.ingestion.load_corpus_snapshot()` to obtain documents and revision together. An exported snapshot supports offline algorithm development, not a live freshness check against TV1's changing corpus.
+When running against TV1's database/storage on the same machine, use `smartdoc.ingestion.load_corpus_snapshot("vietonline_news_200")` to obtain documents and revision together. An exported snapshot supports offline algorithm development, not a live freshness check against TV1's changing corpus.
 
 ## Current limitations
 
-- Eleven ready documents are an integration set, not the final 100–200-document corpus or a labeled benchmark.
-- Source URLs are still pending in database metadata.
-- Per-document preprocessing versions are not persisted. Exports describe the current pipeline but cannot guarantee every historical record used that version. Reprocessing/version tracking must be addressed before freezing the evaluation corpus.
+- The corpus contains 200 news articles across five categories; relevance queries and labels still need to be created.
+- Source references identify the dataset. Original publisher article URLs are not provided by the downloaded CSV.
+- Per-document manifests are recorded and snapshot loading rejects unknown or outdated processing. See `preprocessing_version.md`; save the snapshot preprocessing fingerprint with index artifacts and compare it with the query pipeline.
 - Extraction quality and tokenization require manual review; successful export does not certify linguistic accuracy.
-- Original documents or a complete portable storage/database bundle are required later for TV3 content viewing.
+- A database copy is sufficient for raw-text viewing; original-file download still requires the storage folder.
+
+## PostgreSQL content storage
+
+Live snapshot reads obtain clean text directly from `documents.clean_text`. Content viewing uses `raw_text`. Original file references still resolve against the local storage adapter. Upgrade existing DBs with `python -m scripts.init_db` followed by `python -m scripts.backfill_document_text`.
