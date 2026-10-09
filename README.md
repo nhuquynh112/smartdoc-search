@@ -538,3 +538,7 @@ python -m scripts.backfill_document_text
 ```
 
 Backfill validates original hashes, copies text in one transaction and validates the ready-text constraint. IDs and corpus revision remain unchanged because indexed text is unchanged. Future preprocessing changes update DB text and metadata in one transaction and increment revision. Original file writes still require cross-storage failure handling. A DB backup now includes searchable text; original-file downloads require transferring the storage folder separately.
+
+### Transfer the Database
+
+Use [the database transfer guide](docs/database_transfer.md) to share all 200 records with teammates. `python -m scripts.backup_database` creates a private dump; `python -m scripts.restore_database reports/smartdoc.dump` restores into an empty schema without overwriting existing work. Original files are transferred separately.
