@@ -6,7 +6,7 @@ SmartDoc Search is an academic project for the **Multimedia Database Systems** c
 
 The project is built around a concrete question: **given a Vietnamese query, which documents should appear first, and what evidence explains their ranking?** Its focus is a traceable path from source documents to searchable features, with retrieval results that can be checked against mathematical examples and human relevance judgments.
 
-**Development stage:** Foundation and system design. The repository currently contains the shared directory structure and documentation. The ingestion pipeline, database schema, retrieval engine, and user interface are pending implementation. All capabilities and acceptance criteria below describe the intended system unless explicitly marked complete.
+**Development stage:** Foundation and system design. The repository currently contains the shared directory structure and documentation. PostgreSQL schema initialization and host-side Python connectivity are implemented and verified on Ubuntu. TXT/PDF loading and shared Vietnamese preprocessing are implemented and tested. Basic end-to-end ingestion, automatic metadata, local storage and the indexing snapshot contract are implemented. The retrieval engine and user interface are pending implementation. All capabilities and acceptance criteria below describe the intended system unless explicitly marked complete.
 
 ## Contents
 
@@ -189,11 +189,11 @@ The baseline demo will serialize corpus mutations and index rebuilds. PostgreSQL
 
 ## Module Contracts
 
-These are planned integration contracts, not currently available functions.
+The TV1 data-service functions below are implemented. The TV2 search interface remains a planned contract.
 
 ### Data to Retrieval
 
-`load_documents_for_index()` will return records in deterministic document-ID order:
+`load_documents_for_index()` returns records in deterministic document-ID order:
 
 ```python
 {
@@ -205,7 +205,7 @@ These are planned integration contracts, not currently available functions.
 }
 ```
 
-The index builder will receive a corpus snapshot and its revision. It must preserve the row-to-document mapping when saving the matrix and related artifacts.
+`load_corpus_snapshot()` returns `documents` together with `corpus_revision` under the ingestion lock. The index builder should use this snapshot. It must preserve the row-to-document mapping when saving the matrix and related artifacts.
 
 ### Retrieval to Application
 
@@ -248,8 +248,8 @@ Empty directories are retained with `.gitkeep`. Local uploads, processed text, g
 | Database adapter | Psycopg 3 | Parameterized database access |
 | Retrieval | scikit-learn and sparse matrices | TF-IDF and numerical scoring |
 | Application | Streamlit | Interactive demonstration |
-| PDF extraction | Library selection pending | Text-layer extraction |
-| Vietnamese segmentation | Tokenizer selection pending | Shared document and query features |
+| PDF extraction | pypdf | Text-layer extraction |
+| Vietnamese segmentation | Underthesea | Shared document and query features |
 | Collaboration | Git and GitHub | Version control and review |
 
 Dependency versions will be pinned after compatibility testing. PostgreSQL metadata indexes and the retrieval inverted index serve different purposes; the latter is the feature index used for search.
@@ -344,17 +344,81 @@ The named volume retains database contents after `down`. Adding `-v` deletes the
 
 ### Verified Setup Status
 
-Ubuntu setup has been demonstrated with Python **3.12.3**, a PostgreSQL **16.15** container reporting healthy, and a container-local query returning `smartdoc` / `smartdoc_app`. Host-side Python authentication, schema initialization, and Windows execution remain to be verified.
+Ubuntu setup has been demonstrated with Python **3.12.3**, a PostgreSQL **16.15** container reporting healthy, and a container-local query returning `smartdoc` / `smartdoc_app`. Host-side Python authentication and schema initialization have also passed on Ubuntu. Windows execution remains to be verified.
 
-### Runtime Setup Roadmap
+### 6. Install Database Dependencies and Initialize the Schema
 
-The following setup assets are pending:
+With the virtual environment active:
 
-- `requirements.txt` with verified dependencies.
-- Database schema and initialization command.
-- Ingestion, index-building, evaluation, and application entry points.
+```bash
+python -m pip install -r requirements.txt
+python -m scripts.init_db
+python -m scripts.check_db
+```
 
-Runnable commands will be documented as these components are implemented and verified from a clean environment. Keep the actual `.env` local and use configurable paths rather than machine-specific absolute paths.
+A fresh database should report:
+
+```text
+Database schema initialized successfully.
+Connected to database: smartdoc
+Corpus revision: 0; ready documents: 0
+```
+
+The schema contains `documents` and `corpus_state`. Initialization can be rerun without dropping existing tables or records; it is not a migration mechanism for future schema changes. Commands must be run from the repository root. Current dependencies cover database access, document extraction and Vietnamese segmentation. Additional dependencies will be added as their modules are implemented.
+
+### Preview Document Processing
+
+```bash
+python -m scripts.preview_document data/samples/intro_information_systems.txt
+python -m unittest tests.test_text_pipeline -v
+```
+
+The preview does not insert records into PostgreSQL. TXT inputs must be UTF-8 (a BOM is accepted); PDFs must contain extractable text and must not be encrypted. Default preprocessing uses Underthesea segmentation, preserves diacritics and disables stopword removal. TV2 must use the same `PreprocessingConfig` for documents and queries and preserve underscore-joined tokens in its vectorizer.
+
+### Export Corpus Quality Checks
+
+```bash
+python -m scripts.report_data_quality
+```
+
+This read-only command writes `reports/data_quality_report.csv` and `reports/data_quality_summary.json`, including document states, word counts, missing database sources and storage integrity checks. Generated reports are excluded from Git. Duplicate upload attempts are not persisted, so their count is reported as unavailable rather than zero. These checks do not certify PDF reading order or linguistic quality; review extracted text manually. Source entries in `data/sources.csv` are not automatically imported into database metadata.
+
+### Remaining Runtime Setup
+
+Index-building, evaluation, and application entry points remain pending. Cloning the repository does not copy another contributor's local database.
+
+### Import Documents
+
+```bash
+python -m scripts.ingest_documents data/samples
+python -m scripts.check_db
+```
+
+The importer reports `ready`, `duplicate`, or `failed` per file. It saves originals and processed text outside Git, generates metadata, and increments the corpus revision for new ready documents. Failed records do not enter the index. A failed file with the same hash must be explicitly removed before retrying. The included sample is self-authored integration data, not a labeled evaluation corpus.
+
+Run text-pipeline tests:
+
+```bash
+python -m unittest tests.test_text_pipeline -v
+```
+
+Run the explicit integration test against the configured development database:
+
+```bash
+python -m unittest tests.test_ingestion_integration -v
+```
+
+The integration test creates and removes temporary records; corpus revision advances during the test. It must not be run against a production database.
+
+Ingestion serializes operations through a PostgreSQL advisory lock. Individual filesystem writes are atomic, but database and filesystem storage are not one transaction. A process crash or database commit failure may leave orphan files; reconciliation and broader recovery tests remain follow-up work. Segmentation now respects basic sentence punctuation/newlines before tokenization; linguistic accuracy still requires corpus review.
+
+### Export Data for TV2
+
+```bash
+python -m scripts.export_corpus
+```
+
+This writes `reports/tv2_corpus.json` with ready document text, stable IDs, corpus revision and a snapshot fingerprint. TV2 can load it without PostgreSQL; follow [the handoff guide](docs/tv2_handoff.md). The export does not include original PDFs, and its storage references remain local to TV1. Per-document preprocessing versions are not yet persisted, so the current pipeline description does not certify historical record configurations. Resolve this before freezing the evaluation corpus.
 
 ## Evaluation and Verification
 

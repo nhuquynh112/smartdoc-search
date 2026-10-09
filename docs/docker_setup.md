@@ -59,7 +59,7 @@ SELECT current_database(), current_user;
 
 Expected defaults: database `smartdoc`, user `smartdoc_app`.
 
-A healthy status verifies server readiness, not that Python credentials or the project schema have been tested. Schema initialization and Python connection checks will be documented when those scripts are integrated into the repo.
+A healthy status verifies server readiness, not that Python credentials or the project schema have been tested. Run `python -m scripts.init_db` and `python -m scripts.check_db` after installing requirements in the virtual environment; see the root README.
 
 ## Stop and resume
 
@@ -80,4 +80,4 @@ The named volume retains data when containers are removed with `down`. Do not ap
 
 ## Current validation status
 
-Container startup and a container-local database/user query have been verified on Ubuntu. Host Python authentication, schema initialization and Windows execution still require verification.
+Container startup and a container-local database/user query have been verified on Ubuntu. Host Python authentication and schema initialization are also verified on Ubuntu. Windows execution remains to be verified.
