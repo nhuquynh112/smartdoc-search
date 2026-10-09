@@ -10,7 +10,7 @@ from .storage_adapter import LocalStorage
 # Also used by snapshot reads/deletion. TV2 should read snapshot under this lock.
 CORPUS_LOCK = 73426001
 
-def ingest_document(path, source_uri=None, *, title=None, corpus_name="integration", category=None, dataset_id=None):
+def ingest_document(path, source_uri=None, *, title=None, corpus_name="integration", category=None, dataset_id=None, retry_failed=False):
     path = Path(path)
     if path.suffix.lower() not in {'.txt', '.pdf'}:
         raise DocumentLoadError('Only TXT and PDF documents are supported.')
@@ -26,10 +26,14 @@ def ingest_document(path, source_uri=None, *, title=None, corpus_name="integrati
         conn.execute('SELECT pg_advisory_xact_lock(%s)', (CORPUS_LOCK,))
         existing = conn.execute('SELECT id, ingest_status FROM documents WHERE sha256=%s', (meta['sha256'],)).fetchone()
         if existing:
-            return {'document_id': existing['id'], 'status': 'duplicate', 'existing_status': existing['ingest_status']}
-        doc = conn.execute('''INSERT INTO documents(title,file_type,size_bytes,sha256,source_uri,corpus_name,category,dataset_id)
-            VALUES (%(title)s,%(file_type)s,%(size_bytes)s,%(sha256)s,%(source_uri)s,%(corpus_name)s,%(category)s,%(dataset_id)s) RETURNING id''', meta).fetchone()
-        doc_id = doc['id']
+            if existing['ingest_status'] != 'failed' or not retry_failed:
+                return {'document_id': existing['id'], 'status': 'duplicate', 'existing_status': existing['ingest_status']}
+            doc_id = existing['id']
+            conn.execute("UPDATE documents SET ingest_status='pending',error_message=NULL WHERE id=%s", (doc_id,))
+        else:
+            doc = conn.execute('''INSERT INTO documents(title,file_type,size_bytes,sha256,source_uri,corpus_name,category,dataset_id)
+                VALUES (%(title)s,%(file_type)s,%(size_bytes)s,%(sha256)s,%(source_uri)s,%(corpus_name)s,%(category)s,%(dataset_id)s) RETURNING id''', meta).fetchone()
+            doc_id = doc['id']
         original_ref = f"originals/{doc_id}.{meta['file_type']}"
         text_ref = f'processed/{doc_id}.txt'
         try:
@@ -48,7 +52,7 @@ def ingest_document(path, source_uri=None, *, title=None, corpus_name="integrati
             if cleanup_errors: error += '; cleanup required: ' + ', '.join(cleanup_errors)
             conn.execute("UPDATE documents SET ingest_status='failed',error_message=%s WHERE id=%s", (error, doc_id))
             return {'document_id': doc_id, 'status': 'failed', 'error': error}
-        conn.execute("""UPDATE documents SET ingest_status='ready',word_count=%s,storage_ref=%s,text_ref=%s, preprocessing_version=%s, preprocessing_config=%s, processed_at=now(),raw_text=%s,clean_text=%s
+        conn.execute("""UPDATE documents SET ingest_status='ready',word_count=%s,storage_ref=%s,text_ref=%s, preprocessing_version=%s, preprocessing_config=%s, processed_at=now(),error_message=NULL,raw_text=%s,clean_text=%s
                         WHERE id=%s""", (processed.word_count, original_ref, text_ref, manifest['fingerprint'], Jsonb(manifest['settings']), raw_text, processed.clean_text, doc_id))
         conn.execute('UPDATE corpus_state SET revision=revision+1 WHERE singleton')
         return {'document_id': doc_id, 'status': 'ready', 'word_count': processed.word_count}

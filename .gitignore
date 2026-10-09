@@ -31,3 +31,6 @@ reports/*
 .idea/
 .DS_Store
 Thumbs.db
+
+# Recoverable local storage quarantine
+storage/quarantine/

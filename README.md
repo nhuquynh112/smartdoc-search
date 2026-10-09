@@ -542,3 +542,7 @@ Backfill validates original hashes, copies text in one transaction and validates
 ### Transfer the Database
 
 Use [the database transfer guide](docs/database_transfer.md) to share all 200 records with teammates. `python -m scripts.backup_database` creates a private dump; `python -m scripts.restore_database reports/smartdoc.dump` restores into an empty schema without overwriting existing work. Original files are transferred separately.
+
+### Recovery and Storage Reconciliation
+
+See [recovery procedures](docs/recovery.md). Use `python -m scripts.reconcile_storage` for a read-only audit; add `--quarantine` to move unreferenced files into recoverable storage. Retry failed same-hash inputs with `python -m scripts.ingest_documents path/to/file.pdf --retry-failed`. Ready records are never overwritten by retry.
