@@ -6,7 +6,7 @@ SmartDoc Search is an academic project for the **Multimedia Database Systems** c
 
 The project is built around a concrete question: **given a Vietnamese query, which documents should appear first, and what evidence explains their ranking?** Its focus is a traceable path from source documents to searchable features, with retrieval results that can be checked against mathematical examples and human relevance judgments.
 
-**Development stage:** Foundation and system design. The repository currently contains the shared directory structure and documentation. PostgreSQL schema initialization and host-side Python connectivity are implemented and verified on Ubuntu. TXT/PDF loading and shared Vietnamese preprocessing are implemented and tested. Basic end-to-end ingestion, automatic metadata, local storage and the indexing snapshot contract are implemented. The retrieval engine and user interface are pending implementation. All capabilities and acceptance criteria below describe the intended system unless explicitly marked complete.
+**Development stage:** TV1 data pipeline implemented; retrieval and application integration in progress. PostgreSQL schema initialization and host-side Python connectivity are implemented and verified on Ubuntu. TXT/PDF loading and shared Vietnamese preprocessing are implemented and tested. Basic end-to-end ingestion, automatic metadata, local storage and the indexing snapshot contract are implemented. The retrieval engine and user interface are pending implementation. All capabilities and acceptance criteria below describe the intended system unless explicitly marked complete.
 
 ## Contents
 
@@ -180,7 +180,7 @@ Source references will be recorded when known rather than inferred. SHA-256 dete
 
 ### Consistency Rules
 
-- A document becomes `ready` only after the original file and processed text have been stored successfully.
+- A document becomes `ready` only after file writes succeed and metadata, raw text, clean text and the preprocessing manifest are committed to PostgreSQL.
 - Only `ready` documents enter the searchable corpus; IDs remain stable after other documents are deleted.
 - A successful change to the searchable corpus increments `corpus_revision`.
 - The initial implementation rebuilds the complete index after additions or deletions.
@@ -366,7 +366,7 @@ Connected to database: smartdoc
 Corpus revision: 0; ready documents: 0
 ```
 
-The schema contains `documents` and `corpus_state`. Initialization can be rerun without dropping existing tables or records; it is not a migration mechanism for future schema changes. Commands must be run from the repository root. Current dependencies cover database access, document extraction and Vietnamese segmentation. Additional dependencies will be added as their modules are implemented.
+The schema contains `documents` and `corpus_state`. Initialization creates the base schema and applies SQL files from `database/migrations/` in filename order. Current migrations are additive and idempotent, so rerunning preserves existing records. This is a simple migration runner without a migration-history table; future migration files must remain safe to rerun. Commands must be run from the repository root. Current dependencies cover database access, document extraction and Vietnamese segmentation. Additional dependencies will be added as their modules are implemented.
 
 ### Preview Document Processing
 
@@ -396,7 +396,11 @@ python -m scripts.ingest_documents data/samples
 python -m scripts.check_db
 ```
 
-The importer reports `ready`, `duplicate`, or `failed` per file. It saves originals and processed text outside Git, generates metadata, and increments the corpus revision for new ready documents. Failed records do not enter the index. A failed file with the same hash must be explicitly removed before retrying. The included sample is self-authored integration data, not a labeled evaluation corpus.
+The importer reports `ready`, `duplicate`, or `failed` per file. It saves originals and processed text outside Git, generates metadata, and increments the corpus revision for new ready documents. Failed records do not enter the index. A failed file with the same hash can be retried using `--retry-failed`, preserving its ID and metadata. Ready documents remain duplicates and are not overwritten. If the file bytes change, the new hash represents a new document. The included sample is self-authored integration data, not a labeled evaluation corpus.
+
+```bash
+python -m scripts.ingest_documents path/to/file.pdf --retry-failed
+```
 
 Run text-pipeline tests:
 
