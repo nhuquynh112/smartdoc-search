@@ -1,182 +1,345 @@
 # SmartDoc Search
 
-A Vietnamese document retrieval project built around the Vector Space Model (VSM), TF-IDF, cosine similarity, and ranked search results.
+**Vietnamese document retrieval with TF-IDF, cosine similarity, and PostgreSQL.**
 
-Developed for the **Multimedia Database Systems** course, the project focuses on explainable retrieval, reproducible experiments, and reliable document ingestion. PostgreSQL manages document metadata; a separate storage layer manages source files and processed text.
+SmartDoc Search is an academic project for the **Multimedia Database Systems** course. It brings document ingestion, Vietnamese text processing, feature indexing, ranked retrieval, and experimental evaluation into one system design.
 
-> **Project status:** Repository scaffold. Document ingestion, database initialization, search, and the application interface are planned and are not implemented yet.
+The project is built around a concrete question: **given a Vietnamese query, which documents should appear first, and what evidence explains their ranking?** Its focus is a traceable path from source documents to searchable features, with retrieval results that can be checked against mathematical examples and human relevance judgments.
 
-## Objectives
+**Development stage:** Foundation and system design. The repository currently contains the shared directory structure and documentation. The ingestion pipeline, database schema, retrieval engine, and user interface are pending implementation. All capabilities and acceptance criteria below describe the intended system unless explicitly marked complete.
 
-- Ingest UTF-8 TXT files and PDFs with an extractable text layer.
-- Normalize and tokenize Vietnamese text through a shared preprocessing pipeline.
-- Generate document metadata automatically during ingestion.
-- Represent documents and queries in the same TF-IDF feature space.
-- Use an inverted index to select candidate documents, then rank them by cosine similarity.
-- Evaluate retrieval quality using human relevance judgments, Precision@5, and MRR.
+## Contents
 
-## Project Scope
+- [Project Goals](#project-goals)
+- [Scope and User Experience](#scope-and-user-experience)
+- [System Architecture](#system-architecture)
+- [Retrieval Method](#retrieval-method)
+- [Data and Storage Design](#data-and-storage-design)
+- [Module Contracts](#module-contracts)
+- [Repository Structure](#repository-structure)
+- [Technology Choices](#technology-choices)
+- [Getting Started](#getting-started)
+- [Evaluation and Verification](#evaluation-and-verification)
+- [Team Responsibilities](#team-responsibilities)
+- [Development Workflow](#development-workflow)
+- [Delivery Milestones](#delivery-milestones)
+- [Limitations and Future Work](#limitations-and-future-work)
+- [References](#references)
 
-The initial target is **100–200 valid Vietnamese documents** and **20–30 labeled evaluation queries**. Search results will include document titles, scores, source references, and access to document content.
+## Project Goals
 
-OCR, chatbots, neural embeddings, and incremental TF-IDF updates are outside the initial scope. These extensions can be considered after the core system passes acceptance checks.
+The implementation will address the four core requirements of the assignment:
 
-## Planned Architecture
+| Requirement | Intended Implementation | Verification |
+| --- | --- | --- |
+| Text preprocessing | Shared Vietnamese normalization and tokenization for documents and queries | Documented before-and-after examples and edge-case tests |
+| TF-IDF representation | A fitted vocabulary and weighted sparse document matrix | A small hand-calculated example checked against the configured library |
+| Cosine similarity | Comparable query and document vectors in the same feature space | Numerical checks and full-corpus scoring comparisons |
+| Result ranking | Descending similarity scores with deterministic tie handling and Top-K selection | Expected-order tests and retrieval evaluation |
+
+The supporting work adds an inverted feature index, automatic metadata generation, PostgreSQL persistence, and a reproducible demonstration.
+
+## Scope and User Experience
+
+The initial corpus target is **100–200 valid Vietnamese documents**. The evaluation target is **20–30 queries with human relevance labels**. These are delivery targets, not completed dataset counts.
+
+The planned application will let a user:
+
+1. Upload a TXT file or a PDF with an extractable text layer.
+2. Review automatically generated metadata and the ingestion outcome.
+3. Enter a Vietnamese query and choose the number of results.
+4. Inspect document titles, ranks, similarity scores, sources, and document content.
+5. Examine selected preprocessing outputs, index postings, and term contributions to a result's score.
+
+Image-only PDFs will receive an explicit unsupported-input message in the initial release. OCR is outside the baseline scope.
+
+## System Architecture
+
+The design separates data management, retrieval, and presentation so each component has a clear responsibility and a testable interface.
 
 ```text
-TXT / PDF documents
-        |
-        v
-Document loader -> Vietnamese preprocessing -> Metadata generation
-        |                       |                       |
-        v                       v                       v
-Original files            Processed text           PostgreSQL
-        |                       |                       |
-        +-----------------------+-----------------------+
-                                |
-                                v
-                    Ready document snapshot
-                                |
-                                v
-             TF-IDF + inverted index + document ID mapping
-                                |
-                                v
-             Query preprocessing -> candidates -> cosine -> Top-K
-                                |
-                                v
-                       Streamlit application
+                       DOCUMENT INGESTION
+
+    TXT / text-based PDF
+             |
+             v
+    Validation and extraction
+             |
+             v
+    Vietnamese preprocessing
+             |
+             v
+    Storage and metadata persistence
+             |
+       +-----+-------------------+
+       |                         |
+       v                         v
+    File storage             PostgreSQL
+    Original files           Document metadata
+    Processed text           Ingestion state
+                             Corpus revision
+       |                         |
+       +------------+------------+
+                    |
+                    v
+            Ready corpus snapshot
+                    |
+                    v
+       TF-IDF matrix + inverted index
+       Ordered document IDs + manifest
+
+                        QUERY RETRIEVAL
+
+    Query -> shared preprocessing -> fitted vectorizer
+                                          |
+                                          v
+                               Inverted-index candidates
+                                          |
+                                          v
+                                Cosine scoring -> Top-K
+                                          |
+                                          v
+                          Metadata and content resolution
+                                          |
+                                          v
+                                  Streamlit interface
 ```
 
-### Storage Responsibilities
+A storage adapter isolates access to document files. The instructor's note about storing content on a **“feed”** requires clarification; local file storage remains provisional until that requirement is resolved.
 
-- **PostgreSQL:** Stable document IDs, metadata, ingestion status, file references, and corpus revision tracking.
-- **File storage:** Original documents and processed text, accessed through a storage adapter.
-- **Index artifacts:** Fitted vectorizer, sparse TF-IDF matrix, ordered document IDs, inverted index, and a version manifest.
+## Retrieval Method
 
-The instructor's note about storing content on a **“feed”** still requires clarification. Local file storage is a provisional design; the storage adapter will isolate changes once this requirement is confirmed.
+### Vietnamese Preprocessing
+
+Documents and queries will use the same preprocessing configuration: Unicode normalization, lowercase conversion, whitespace and punctuation handling, Vietnamese word segmentation, and configurable stopword removal. Vietnamese diacritics and segmented multiword tokens must be preserved consistently.
+
+Tokenizer selection, stopword sources, and configuration changes will be documented before the evaluation corpus is frozen.
+
+### TF-IDF and the Vector Space Model
+
+Each document is represented by term weights in a shared vocabulary. The baseline design uses raw term counts, smoothed inverse document frequency, and L2 normalization:
+
+```text
+idf(t)       = log((1 + N) / (1 + df(t))) + 1
+weight(t, d) = count(t, d) × idf(t)
+vector(d)    = weight(d) / ||weight(d)||₂
+```
+
+Here, `N` is the number of indexed documents and `df(t)` is the number containing term `t`. The final library settings and the hand-calculated example must use the same conventions.
+
+Queries will be transformed using the fitted corpus vectorizer. They will not be fitted independently or added to the corpus during search.
+
+### Candidate Selection and Ranking
+
+The inverted index maps each vocabulary term to document IDs containing that feature. Query candidates are the **union** of the postings for the query's known terms, allowing partial term overlap.
+
+```text
+cosine(q, d) = (q · d) / (||q||₂ × ||d||₂)
+```
+
+For L2-normalized nonzero vectors, cosine similarity equals the dot product. The engine will rank positive-score results by descending score, then ascending document ID for ties. Fewer than `K` results may be returned when fewer documents have positive scores.
+
+Empty queries, queries with no known vocabulary terms, and an empty corpus will have explicit outcomes. A similarity score measures lexical overlap under this representation; it is not a probability that a document is relevant.
+
+### Ranking Explanations
+
+For normalized vectors, each shared term contributes `q[t] × d[t]` to the score. Showing the largest contributions will make a selected result explainable and provide a useful demonstration of the underlying model.
+
+## Data and Storage Design
+
+### Document Metadata
+
+The proposed `documents` table captures identity, provenance, storage references, and ingestion state.
+
+| Field | Purpose |
+| --- | --- |
+| `id` | Stable document identifier |
+| `title` | Document title with a filename fallback |
+| `file_type` | Supported source format |
+| `size_bytes` | Original file size |
+| `sha256` | Exact-file duplicate detection |
+| `word_count` | Token count after segmentation and before stopword removal |
+| `source_uri` | Known provenance reference; nullable when unavailable |
+| `storage_ref` | Reference to the original file |
+| `text_ref` | Reference to processed text |
+| `created_at` | Time of ingestion, distinct from publication time |
+| `ingest_status` | `pending`, `ready`, or `failed` |
+| `error_message` | Reason for failed ingestion |
+
+Source references will be recorded when known rather than inferred. SHA-256 detects identical files; detection of near-duplicate content is outside the baseline duplicate policy.
+
+### Storage Boundaries
+
+| Layer | Stores |
+| --- | --- |
+| PostgreSQL | Metadata, document identity, ingestion state, and corpus revision |
+| File storage | Original files and processed text |
+| Index artifacts | Vectorizer, sparse TF-IDF matrix, ordered ID mapping, inverted index, and version manifest |
+
+### Consistency Rules
+
+- A document becomes `ready` only after the original file and processed text have been stored successfully.
+- Only `ready` documents enter the searchable corpus; IDs remain stable after other documents are deleted.
+- A successful change to the searchable corpus increments `corpus_revision`.
+- The initial implementation rebuilds the complete index after additions or deletions.
+- New artifacts are built and validated separately, then activated as one version.
+- Search requires a matching corpus and index revision. Failed rebuilds must not expose a partially built index.
+
+The baseline demo will serialize corpus mutations and index rebuilds. PostgreSQL transactions do not cover filesystem operations; ingestion and deletion services must handle failures across both storage layers.
+
+## Module Contracts
+
+These are planned integration contracts, not currently available functions.
+
+### Data to Retrieval
+
+`load_documents_for_index()` will return records in deterministic document-ID order:
+
+```python
+{
+    "document_id": 42,
+    "title": "Example document",
+    "clean_text": "segmented and normalized Vietnamese text",
+    "source_uri": None,
+    "storage_ref": "originals/example.pdf",
+}
+```
+
+The index builder will receive a corpus snapshot and its revision. It must preserve the row-to-document mapping when saving the matrix and related artifacts.
+
+### Retrieval to Application
+
+`search_query(query, top_k)` will return ranked records containing `document_id`, `score`, and `rank`. Validation and index-availability outcomes will be defined explicitly during implementation.
+
+The application will resolve document metadata and content through data-service functions. UI code will not own SQL queries, preprocessing logic, or index construction.
 
 ## Repository Structure
 
 ```text
 smartdoc-search/
-├── README.md
-├── .gitignore
-├── app/                    # TV3 application interface
-├── database/               # TV1 PostgreSQL schema and database setup
-├── smartdoc/               # Shared Python package
+├── README.md               # Shared project overview
+├── .gitignore              # Local files excluded from version control
+├── app/                    # Application interface
+├── database/               # PostgreSQL schema and setup
+├── smartdoc/               # Shared data and retrieval package
 │   └── __init__.py
-├── scripts/                # Initialization, ingestion and evaluation commands
+├── scripts/                # Initialization and pipeline commands
 ├── data/
-│   ├── samples/            # Small shareable integration fixtures
-│   └── sources.csv         # Source provenance register
+│   ├── samples/            # Small, shareable integration fixtures
+│   └── sources.csv         # Corpus source register
 ├── storage/
-│   ├── originals/          # Local source files; ignored by Git
-│   └── processed/          # Local processed text; ignored by Git
-├── artifacts/              # Generated index files; ignored by Git
-├── reports/                # Generated statistics and metrics; ignored by Git
+│   ├── originals/          # Local source files
+│   └── processed/          # Local processed text
+├── artifacts/              # Generated index artifacts
+├── reports/                # Generated data-quality and evaluation results
 ├── tests/                  # Unit and integration tests
 │   └── __init__.py
-└── docs/                   # Architecture, contracts and project checklists
+└── docs/                   # Design notes and contributor checklists
 ```
 
-Empty directories contain `.gitkeep` files so they remain visible in Git. Add only small, permitted test documents to `data/samples/`; keep the full corpus and user uploads outside version control.
+Empty directories are retained with `.gitkeep`. Local uploads, processed text, generated artifacts, and report outputs are ignored by Git. Only small sample documents with appropriate sharing permission belong in `data/samples/`. Final report assets intended for review will be added explicitly in a documented location.
+
+## Technology Choices
+
+| Component | Selected or Planned Technology | Purpose |
+| --- | --- | --- |
+| Language | Python; target environment 3.11 or 3.12 | Data pipeline and retrieval services |
+| Metadata database | PostgreSQL | Persistent document management |
+| Database adapter | Psycopg 3 | Parameterized database access |
+| Retrieval | scikit-learn and sparse matrices | TF-IDF and numerical scoring |
+| Application | Streamlit | Interactive demonstration |
+| PDF extraction | Library selection pending | Text-layer extraction |
+| Vietnamese segmentation | Tokenizer selection pending | Shared document and query features |
+| Collaboration | Git and GitHub | Version control and review |
+
+Dependency versions will be pinned after compatibility testing. PostgreSQL metadata indexes and the retrieval inverted index serve different purposes; the latter is the feature index used for search.
+
+## Getting Started
+
+### Available Now
+
+Clone the repository and inspect its design and directory structure:
+
+```bash
+git clone https://github.com/nhuquynh112/smartdoc-search.git
+cd smartdoc-search
+```
+
+For Python development on Ubuntu, create an isolated environment after installing `python3-venv` if needed:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+This prepares an environment only; it does not install the project or start a database.
+
+### Runtime Setup Roadmap
+
+The following setup assets are pending:
+
+- `.env.example` for `DATABASE_URL` and storage configuration.
+- `requirements.txt` with verified dependencies.
+- `compose.yaml` for a local PostgreSQL service.
+- Database schema and initialization command.
+- Ingestion, index-building, evaluation, and application entry points.
+
+Runnable commands will be documented as these components are implemented and verified from a clean environment. Keep the actual `.env` local and use configurable paths rather than machine-specific absolute paths.
+
+## Evaluation and Verification
+
+### Evaluation Collection
+
+The experiment will use a fixed corpus, documented queries, and human-assigned relevance judgments. Labels will be assigned independently of cosine scores and reviewed when annotators disagree.
+
+Queries will cover individual terms, multiword information needs, Vietnamese compounds, ambiguous terms, and lexical limitations such as synonyms. Queries with no relevant documents in the corpus will be reported separately as behavioral checks.
+
+### Metrics
+
+| Measure | Convention |
+| --- | --- |
+| Precision@5 | Relevant documents in the first five positions divided by five; missing positions count as nonrelevant |
+| MRR | Mean reciprocal rank of the first relevant result; zero when no relevant result is retrieved |
+| Query latency | Measured after loading the index, with the timed steps and environment specified |
+| Index build time | Reported separately from query latency |
+
+The MRR evaluation depth must be fixed before experiments; truncated evaluation will be labeled `MRR@K`. Reports will include per-query results, aggregate metrics, corpus size, preprocessing configuration, and representative failure cases. No benchmark scores are claimed at the scaffold stage.
+
+If time permits, a controlled comparison will evaluate whitespace tokenization against Vietnamese word segmentation while keeping the corpus, queries, labels, and other settings fixed.
+
+### Acceptance Criteria
+
+- [ ] At least 100 valid documents with recorded provenance where available.
+- [ ] All four assignment requirements are implemented and demonstrated.
+- [ ] A hand-calculated TF-IDF and cosine example matches the program within a documented tolerance.
+- [ ] Inverted-index retrieval agrees with full-corpus scoring for positive-score results.
+- [ ] Stable document IDs and consistent artifact versions survive additions, deletions, and restarts.
+- [ ] Invalid files, duplicates, empty queries, unknown terms, and rebuild failures have clear outcomes.
+- [ ] At least 20 labeled queries support documented Precision@5 and MRR results.
+- [ ] Setup and execution are reproducible from a clean environment.
+- [ ] The final demonstration, report, and slides agree with the implemented system.
 
 ## Team Responsibilities
 
-| Role | Ownership | Main Deliverables |
+| Role | Ownership | Evidence to Deliver |
 | --- | --- | --- |
-| TV1 — Data and Storage | Corpus collection, ingestion, Vietnamese preprocessing, metadata, PostgreSQL, storage adapter | Valid document corpus, schema, ingestion services, quality report, indexing data contract |
-| TV2 — Retrieval Engine | VSM, TF-IDF, inverted index, cosine similarity, ranking, index lifecycle | Verified retrieval engine, versioned index artifacts, hand-calculated examples, algorithm tests |
-| TV3 — Application and Evaluation | Streamlit interface, integration, relevance judgments, metrics, presentation | Working demo, evaluation results, integration checklist, report and slides |
+| TV1 — Data and Storage | Corpus, loaders, shared preprocessing, metadata, PostgreSQL, storage adapter | Source register, validated corpus, schema, ingestion tests, data-quality report |
+| TV2 — Retrieval Engine | VSM, TF-IDF, inverted index, scoring, ranking, index lifecycle | Mathematical example, verified engine, artifact manifest, ranking explanations |
+| TV3 — Application and Evaluation | Interface, integration, relevance labels, metrics, presentation | Working demo, evaluation collection, measured results, integration checklist |
 
-Every member documents their own module and participates in end-to-end testing and the final presentation.
+All members contribute to integration, document their own modules, and prepare to explain the complete system. Contributor-specific implementation steps belong in `docs/`; this README describes the shared project.
 
-## TV1 Implementation Plan
+## Development Workflow
 
-| Planned Module | Responsibility |
+The default branch contains shared foundations and reviewed changes. Contributors develop their modules on feature branches and submit pull requests before merging.
+
+| Workstream | Suggested Branch |
 | --- | --- |
-| `smartdoc/config.py` | Read environment settings and resolve storage paths |
-| `smartdoc/db.py` | Provide PostgreSQL connections and document repository operations |
-| `smartdoc/document_loader.py` | Read TXT and extract PDF text; reject empty or unsupported input |
-| `smartdoc/preprocessing.py` | Apply the shared Vietnamese normalization and tokenization pipeline |
-| `smartdoc/metadata_extractor.py` | Generate metadata and SHA-256 fingerprints |
-| `smartdoc/storage_adapter.py` | Store and retrieve original files and processed text |
-| `smartdoc/ingestion.py` | Coordinate ingestion, duplicate handling, status transitions and corpus changes |
-| `database/schema.sql` | Define document metadata and corpus revision storage |
-| `scripts/init_db.py` | Initialize the database schema |
-| `scripts/ingest_documents.py` | Run document ingestion from the command line |
+| Data and storage | `feat/data` |
+| Retrieval engine | `feat/search-engine` |
+| Application and evaluation | `feat/app-evaluation` |
 
-These filenames describe planned work; the implementation files have not been created yet.
-
-## Integration Contract
-
-TV1 will expose `load_documents_for_index()` returning a list of records with:
-
-| Field | Meaning |
-| --- | --- |
-| `document_id` | Stable database document ID |
-| `title` | Document title, with filename fallback when needed |
-| `clean_text` | Text prepared using the shared preprocessing configuration |
-| `source_uri` | Known source reference; nullable when unavailable |
-| `storage_ref` | Storage reference for the original document |
-
-Only documents with `ingest_status = ready` may enter the index. Document IDs must remain stable after deletion, and records must be returned in a deterministic ID order.
-
-TV2 will return ranked records containing `document_id`, `score`, and `rank`. TV3 will retrieve metadata and content through service functions rather than writing database queries inside UI code.
-
-### Consistency Rules
-
-1. Mark a document `ready` only after the original file and processed text are stored successfully.
-2. Use SHA-256 to detect exact duplicate uploads; record failed ingestion with a clear reason.
-3. Increment the corpus revision after a successful change to the searchable document set.
-4. Rebuild the complete index after document additions or deletions in the initial demo.
-5. Validate and activate index artifacts as a single version; never mix matrices, vectorizers, postings, or ID mappings from different builds.
-6. Serve search only when the index revision matches the current corpus revision.
-
-## Development Setup
-
-### Current Stage
-
-The repository currently contains the folder structure and documentation only. No database server or application is started by this scaffold.
-
-### Planned Toolchain
-
-- Python 3.11 or 3.12
-- PostgreSQL
-- Psycopg 3 for database access
-- A Vietnamese tokenizer, selected and shared by TV1 and TV2
-- A PDF text extraction library
-- scikit-learn for TV2 retrieval
-- Streamlit for TV3 application work
-
-Dependency versions will be recorded after installation and verification.
-
-### Next Setup Tasks
-
-1. Add `.env.example` with `DATABASE_URL` and storage settings. Keep the real `.env` local.
-2. Add `compose.yaml` for a local PostgreSQL service with persistent storage.
-3. Add and verify `requirements.txt`.
-4. Implement `database/schema.sql` and `scripts/init_db.py`.
-5. Complete ingestion for ten sample documents and hand off the indexing contract to TV2.
-
-Verified installation and execution commands will be added here as each stage becomes runnable.
-
-## Evaluation and Acceptance
-
-- At least 100 valid, accessible documents.
-- At least 20 queries with independently assigned relevance labels.
-- A hand-calculated TF-IDF and cosine example that matches the implementation.
-- Indexed retrieval agrees with full-corpus scoring for positive-score results.
-- Precision@5 uses a denominator of five even when fewer results are returned.
-- MRR evaluation depth is defined before running experiments; use `MRR@K` when truncated.
-- Failed uploads, duplicate files, empty queries, out-of-vocabulary queries, index rebuild failures, and restarts are handled explicitly.
-- The final system can be recreated using the documented setup procedure.
-
-## Working with Git
-
-Use a feature branch for each module and review changes before merging into the default branch. Keep credentials, virtual environments, local corpus files, and generated index artifacts out of commits.
-
-Before committing:
+Keep commits focused on a coherent change. Pull requests should describe the resulting behavior, the verification performed, and any unresolved integration dependency. Before committing, inspect the changed files and check formatting:
 
 ```bash
 git status
@@ -184,9 +347,31 @@ git diff --check
 git diff
 ```
 
-## Technical References
+Never commit credentials, virtual environments, user uploads, or generated index files. Do not change shared preprocessing behavior or record contracts without coordinating with the affected workstream.
 
+## Delivery Milestones
+
+| Milestone | Completion Evidence |
+| --- | --- |
+| Shared foundation | Repository structure, agreed contracts, storage clarification, environment setup |
+| First integrated path | Ten documents flow from ingestion through indexing to visible search results |
+| Retrieval correctness | Hand-calculated example, real inverted-index usage, deterministic ranking |
+| Corpus and lifecycle | At least 100 ready documents; verified additions, deletions, rebuilds, and restarts |
+| Experimental evaluation | Fixed labels, per-query metrics, timing, and error analysis |
+| Final delivery | Clean-environment run, coherent report and slides, rehearsed demonstration |
+
+Early integration takes priority over finishing modules in isolation. The ten-document path is the first functional checkpoint.
+
+## Limitations and Future Work
+
+TF-IDF retrieves through shared lexical features. It may miss semantically related documents that use different words, and it does not model word order in the baseline unigram configuration. Extraction quality and Vietnamese segmentation also affect ranking.
+
+Possible extensions after the baseline is verified include OCR, near-duplicate detection, alternative retrieval baselines, richer relevance metrics, and semantic retrieval. Each extension should be evaluated against the same documented collection rather than assumed to improve quality.
+
+## References
+
+- [Introduction to Information Retrieval — Manning, Raghavan, and Schütze](https://nlp.stanford.edu/IR-book/)
+- [scikit-learn — TF-IDF term weighting](https://scikit-learn.org/stable/modules/feature_extraction.html#tfidf-term-weighting)
 - [PostgreSQL documentation](https://www.postgresql.org/docs/)
-- [Psycopg 3 installation](https://www.psycopg.org/psycopg3/docs/basic/install.html)
-- [scikit-learn TF-IDF documentation](https://scikit-learn.org/stable/modules/feature_extraction.html#tfidf-term-weighting)
-- [Introduction to Information Retrieval](https://nlp.stanford.edu/IR-book/)
+- [Psycopg 3 documentation](https://www.psycopg.org/psycopg3/docs/)
+- [Streamlit documentation](https://docs.streamlit.io/)
