@@ -256,31 +256,101 @@ Dependency versions will be pinned after compatibility testing. PostgreSQL metad
 
 ## Getting Started
 
-### Available Now
+### Prerequisites
 
-Clone the repository and inspect its design and directory structure:
+- Git and Python 3.11 or 3.12.
+- Ubuntu: Docker Engine with the Compose plugin, or Docker Desktop.
+- Windows: Docker Desktop running Linux containers.
+
+Docker runs PostgreSQL; Python and the application run on the host. Each contributor has an independent local database. See [the Docker setup guide](docs/docker_setup.md) for installation references and troubleshooting.
+
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/nhuquynh112/smartdoc-search.git
 cd smartdoc-search
 ```
 
-For Python development on Ubuntu, create an isolated environment after installing `python3-venv` if needed:
+### 2. Configure Local Environment Variables
+
+Ubuntu:
+
+```bash
+cp .env.example .env
+```
+
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Open `.env` locally and replace both `CHANGE_ME` placeholders with the same password. For the initial setup, use letters and digits to avoid URI escaping. The database connection for host Python uses `localhost:5433`. Keep `.env` out of version control.
+
+### 3. Start PostgreSQL
+
+Run from the repository root on either operating system:
+
+```bash
+docker compose up -d --wait
+docker compose ps
+```
+
+The `db` service should report `healthy`, with port mapping `127.0.0.1:5433->5432/tcp`. Port 5433 avoids a conflict with a native PostgreSQL installation on port 5432.
+
+Check the database and role inside the container:
+
+```bash
+docker compose exec db sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+```
+
+At the psql prompt:
+
+```sql
+SELECT current_database(), current_user;
+\q
+```
+
+The defaults are database `smartdoc` and role `smartdoc_app`. This container-local check does not yet verify host-side Python authentication or the project schema.
+
+### 4. Create a Python Virtual Environment
+
+Ubuntu:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+python --version
 ```
 
-This prepares an environment only; it does not install the project or start a database.
+Windows PowerShell:
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python --version
+```
+
+If PowerShell blocks activation, the environment's interpreter can be used directly as `.\.venv\Scripts\python.exe`. Creating the environment does not install project dependencies.
+
+### 5. Stop and Resume the Database
+
+```bash
+docker compose down
+docker compose up -d --wait
+```
+
+The named volume retains database contents after `down`. Adding `-v` deletes the volume and its data. Changing credentials in `.env` does not update an already initialized database; changes must also be applied to the existing database role.
+
+### Verified Setup Status
+
+Ubuntu setup has been demonstrated with Python **3.12.3**, a PostgreSQL **16.15** container reporting healthy, and a container-local query returning `smartdoc` / `smartdoc_app`. Host-side Python authentication, schema initialization, and Windows execution remain to be verified.
 
 ### Runtime Setup Roadmap
 
 The following setup assets are pending:
 
-- `.env.example` for `DATABASE_URL` and storage configuration.
 - `requirements.txt` with verified dependencies.
-- `compose.yaml` for a local PostgreSQL service.
 - Database schema and initialization command.
 - Ingestion, index-building, evaluation, and application entry points.
 
