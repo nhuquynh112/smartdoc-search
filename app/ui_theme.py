@@ -34,11 +34,11 @@ def apply_theme(dark: bool) -> None:
 [data-testid="stFileUploader"] section{background:var(--sd-surface) !important;border:1px dashed #6c84c0 !important;border-radius:19px !important;}
 [data-testid="stTabs"] button{color:var(--sd-muted) !important;}
 [data-testid="stTabs"] button[aria-selected="true"]{color:#39c9f6 !important;}
-.stButton > button[kind="primary"], button[data-testid="stBaseButton-primary"]{
+.stButton > button[kind="primary"], button[data-testid="stBaseButton-primary"], button[data-testid="stBaseButton-primaryFormSubmit"]{
  background:linear-gradient(110deg,#574be9 0%,#3968fa 48%,#079ed0 100%) !important;
  color:#fff !important;border:0 !important;min-height:43px;border-radius:13px !important;font-weight:750;
  box-shadow:0 7px 22px rgba(70,81,239,.23);transition:transform .18s ease,box-shadow .18s ease,filter .18s ease;}
-.stButton > button[kind="primary"] p,button[data-testid="stBaseButton-primary"] p{color:#fff !important;}
+.stButton > button[kind="primary"] p,button[data-testid="stBaseButton-primary"] p,button[data-testid="stBaseButton-primaryFormSubmit"] p{color:#fff !important;}
 .stButton > button[kind="primary"]:hover{transform:translateY(-2px);filter:brightness(1.08);box-shadow:0 11px 27px rgba(70,81,239,.33);}
 .stButton > button[kind="secondary"],button[data-testid="stBaseButton-secondary"]{
  background:var(--sd-surface) !important;color:var(--sd-text) !important;border:1px solid var(--sd-border) !important;

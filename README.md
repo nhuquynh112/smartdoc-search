@@ -559,7 +559,9 @@ Run the TV2 retrieval-focused test suites from the repository root with the proj
 python -m pytest -q tests/test_tfidf_engine.py tests/test_inverted_index.py tests/test_search_engine.py tests/test_index_manager.py tests/test_retrieval_engine.py
 ```
 
-Run the complete test suite with:
+The complete suite below creates/deletes records and can increment the configured database's corpus revision. Use a separate disposable test database, never the frozen evaluation/demo database.
+
+Run the complete test suite against that test database with:
 
 ```powershell
 python -m pytest
@@ -576,3 +578,11 @@ python -m pytest -q -k "not test_ready_duplicate_failed_and_delete and not test_
 This exclusion is for local verification only; it does not replace database integration testing.
 
 The retrieval-focused tests verify TF-IDF behavior, inverted-index retrieval, ranking, index management, and the public retrieval API. A passing test suite does not replace the hand-calculated TF-IDF/cosine example or the labeled-query evaluation required for final acceptance.
+
+### Streamlit Application and Evaluation (Dat)
+
+Install `requirements_tv3.txt`, start PostgreSQL, then run `python -m streamlit run app/main.py` from the repository root. The application uses the real TF-IDF retrieval service with Top-5/10/20, rank, cosine score, sources, a content reader and keyword-contribution explanations. Use **Xây lại chỉ mục** after a corpus change; mismatched revision/fingerprint/index versions cannot serve search results. Search checks PostgreSQL without using the library's 600-second display cache.
+
+On Windows with Docker bound to `127.0.0.1:5433`, use `127.0.0.1` as the local `DATABASE_URL` host if `localhost` incurs an IPv6 connection timeout; keep credentials in the ignored `.env` file.
+
+See [application setup](docs/tv3_ui_pro_v2.md), [acceptance evidence](docs/tv3_acceptance.md), [evaluation and independent relevance labeling](evaluation/README.md), [member report](docs/tv3_report.md) and [demo script](docs/tv3_demo.md). The committed query/label kit is a draft. Precision@5 and MRR@20 remain pending human review and actual labels.

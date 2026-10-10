@@ -37,7 +37,8 @@ class RecoveryTests(unittest.TestCase):
             storage=LocalStorage(folder)
             storage.write('originals/unreferenced.txt',b'temporary fixture')
             report=reconcile_storage(storage=storage)
-            self.assertIn('originals/unreferenced.txt',report['orphan_files'])
+            self.assertIn('originals/unreferenced.txt',
+                          [Path(ref).as_posix() for ref in report['orphan_files']])
             self.assertTrue(storage.resolve('originals/unreferenced.txt').exists())
             report=reconcile_storage(quarantine=True,storage=storage)
             self.assertEqual(len(report['quarantined']),1)

@@ -1,8 +1,8 @@
 """SmartDoc Search Pro V3 — premium, interactive Vietnamese document workspace.
 
 Read-only analytics and document browsing use the existing data-service APIs.
-New TXT/PDF uploads use the existing ingestion API. Ranked retrieval is not
-claimed or simulated until an actual search-engine integration is available.
+New TXT/PDF uploads use the existing ingestion API. Ranked retrieval uses the
+shared TF-IDF service and checks index freshness against PostgreSQL.
 
 Run from the repository root:
     python -m streamlit run app/main.py
@@ -13,13 +13,21 @@ from collections import Counter
 import html
 from pathlib import Path
 import re
-import tempfile
+import sys
+from time import perf_counter
+
+# Streamlit adds app/ to sys.path when launched by filename.
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 import pandas as pd
 import streamlit as st
 
 from app.catalog_utils import categories, category_label, filter_catalog, page_slice
 from app.ui_theme import apply_theme
+from app.search_service import SearchService
+from app.upload_service import process_uploads
 from smartdoc.ingestion import (
     get_document_text,
     get_documents_by_ids,
@@ -83,6 +91,23 @@ def cached_content(document_id: int) -> str:
     return get_document_text(document_id)
 
 
+@st.cache_resource(show_spinner=False)
+def search_service() -> SearchService:
+    return SearchService()
+
+
+def clear_document_cache() -> None:
+    get_catalog.clear()
+    cached_content.clear()
+    st.session_state.pop("ranked_search", None)
+
+
+def safe_error(exc: object) -> str:
+    # Connection exceptions can contain a DSN; never reveal credentials in UI.
+    message = re.sub(r"(postgres(?:ql)?://)[^\s@]+@", r"\1***@", str(exc))
+    return re.sub(r"(?i)(password\s*=\s*)(?:'[^']*'|\"[^\"]*\"|\S+)", r"\1***", message)
+
+
 def go(page: str) -> None:
     st.session_state["active_page"] = page
     st.rerun()
@@ -90,6 +115,7 @@ def go(page: str) -> None:
 
 def go_search(query: str = "") -> None:
     st.session_state["search_text"] = query
+    st.session_state["run_quick_search"] = bool(query.strip())
     go("Tìm kiếm")
 
 
@@ -198,16 +224,16 @@ def reader(doc: dict) -> None:
     st.caption(f"#{doc_id} · {category_label(doc)} · {int(doc.get('word_count') or 0):,} từ")
     a, b = st.columns([1, 1])
     with a:
-        if st.button("★ Đã lưu" if saved(doc_id) else "☆ Lưu tài liệu", key=f"reader_star_{doc_id}", use_container_width=True):
-            toggle_saved(doc_id)
+        st.button("★ Đã lưu" if saved(doc_id) else "☆ Lưu tài liệu", key=f"reader_star_{doc_id}",
+                  width="stretch", on_click=toggle_saved, args=(doc_id,))
     with b:
         src = str(doc.get("source_uri") or "")
         if src.startswith(("https://", "http://")):
-            st.link_button("↗ Nguồn tài liệu", src, use_container_width=True)
+            st.link_button("↗ Nguồn tài liệu", src, width="stretch")
     try:
         content = cached_content(doc_id)
     except Exception as exc:
-        st.error(f"Không đọc được tài liệu: {exc}")
+        st.error(f"Không đọc được tài liệu: {safe_error(exc)}")
         return
     tab_read, tab_details = st.tabs(["📖 Nội dung", "ℹ️ Thông tin"])
     with tab_read:
@@ -239,12 +265,12 @@ def document_item(doc: dict, context: str, *, grid_mode: bool = False) -> None:
     st.markdown(doc_html(doc, compact=grid_mode), unsafe_allow_html=True)
     left, right = st.columns([2, 1], gap="small")
     with left:
-        if st.button("↗ Đọc tài liệu", key=f"{context}_open_{doc_id}", use_container_width=True):
+        if st.button("↗ Đọc tài liệu", key=f"{context}_open_{doc_id}", width="stretch"):
             open_reader(doc)
     with right:
-        if st.button("★" if saved(doc_id) else "☆", key=f"{context}_star_{doc_id}",
-                     help="Bỏ yêu thích" if saved(doc_id) else "Thêm yêu thích", use_container_width=True):
-            toggle_saved(doc_id)
+        st.button("★" if saved(doc_id) else "☆", key=f"{context}_star_{doc_id}",
+                  help="Bỏ yêu thích" if saved(doc_id) else "Thêm yêu thích", width="stretch",
+                  on_click=toggle_saved, args=(doc_id,))
 
 
 def category_bars(docs: list[dict], *, max_items: int = 5) -> None:
@@ -288,24 +314,24 @@ def dashboard(docs: list[dict], revision: int) -> None:
         with qcol:
             q = st.text_input("Tìm nhanh trong thư viện", placeholder="Thử: xe điện, công nghệ, giáo dục...", key="home_query", label_visibility="collapsed")
         with btn:
-            if st.button("⌕ Khám phá", key="home_go", type="primary", use_container_width=True):
+            if st.button("⌕ Khám phá", key="home_go", type="primary", width="stretch"):
                 go_search(q.strip())
     chips = ["Xe điện", "Smartphone", "Sức khỏe", "Công nghệ"]
     chipcols = st.columns(len(chips))
     for col, chip in zip(chipcols, chips):
         with col:
-            if st.button(f"✧ {chip}", key=f"quick_chip_{chip}", use_container_width=True):
+            if st.button(f"✧ {chip}", key=f"quick_chip_{chip}", width="stretch"):
                 go_search(chip)
     section("✦ Không gian làm việc của bạn")
     l, r = st.columns([1.1, 1], gap="large")
     with l:
         st.markdown('<div class="sd-feature"><div class="sd-feature-icon">📚</div><div class="sd-feature-title">Thư viện của bạn</div>'
                     '<div class="sd-feature-desc">Tìm, lọc, đánh dấu và đọc các tài liệu trong cùng một nơi.</div></div>', unsafe_allow_html=True)
-        if st.button("Khám phá toàn bộ tài liệu  →", key="go_lib", use_container_width=True):
+        if st.button("Khám phá toàn bộ tài liệu  →", key="go_lib", width="stretch"):
             go("Thư viện")
         st.markdown('<div class="sd-feature"><div class="sd-feature-icon">♡</div><div class="sd-feature-title">Bộ sưu tập yêu thích</div>'
                     '<div class="sd-feature-desc">Những tài liệu bạn đánh dấu sẽ xuất hiện ở đây trong phiên sử dụng.</div></div>', unsafe_allow_html=True)
-        if st.button(f"Xem đã lưu ({len(st.session_state['favorites'])})  →", key="go_saved", use_container_width=True):
+        if st.button(f"Xem đã lưu ({len(st.session_state['favorites'])})  →", key="go_saved", width="stretch"):
             go("Đã lưu")
     with r:
         st.markdown('<div class="sd-section-title" style="margin-top:0">▥ Chủ đề nổi bật</div>', unsafe_allow_html=True)
@@ -322,38 +348,116 @@ def dashboard(docs: list[dict], revision: int) -> None:
         st.info("Thư viện hiện chưa có tài liệu.")
 
 
-def search_page(docs: list[dict]) -> None:
+def index_controls(context: str) -> dict:
+    """Read current index state without the library's ten-minute cache."""
+    service = search_service()
+    with st.spinner("Đang kiểm tra chỉ mục..."):
+        state = service.status()
+    status = state["status"]
+    if status == "ok":
+        st.caption(f"Chỉ mục sẵn sàng · {state.get('document_count', 0)} tài liệu · "
+                   f"revision {state.get('corpus_revision')} · {state.get('index_version')}")
+    elif status == "empty_corpus":
+        st.info("Thư viện chưa có tài liệu để tìm kiếm. Hãy tải lên TXT hoặc PDF có văn bản.")
+    else:
+        st.warning("Chỉ mục cần được xây lại trước khi tìm kiếm." if status == "stale_index"
+                   else "Chưa có chỉ mục hợp lệ hoặc chưa kết nối được dữ liệu.")
+        with st.expander("Chi tiết trạng thái"):
+            st.code(safe_error(state.get("message", status)), language="text")
+    if st.button("Xây lại chỉ mục", key=f"rebuild_{context}", width="stretch"):
+        with st.spinner("Đang xây và kiểm tra chỉ mục mới..."):
+            result = service.rebuild()
+        clear_document_cache()
+        st.session_state["rebuild_feedback"] = result
+        st.rerun()
+    feedback = st.session_state.pop("rebuild_feedback", None)
+    if feedback:
+        if feedback.get("status") in {"ok", "empty_corpus"} and feedback.get("rebuilt"):
+            st.success("Đã xây và kích hoạt chỉ mục. Có thể tìm kiếm lại.")
+        else:
+            st.error("Chưa thể kích hoạt chỉ mục đồng bộ. Bạn có thể thử xây lại.")
+            st.caption(safe_error(feedback.get("message", "")))
+    return state
+
+
+def search_page() -> None:
     title("TRUNG TÂM KHÁM PHÁ", "Tìm đúng điều bạn cần.",
-          "Tìm nhanh theo tiêu đề và mở tài liệu chỉ với một cú nhấp.")
-    with st.container():
-        st.markdown('<div class="sd-panel"><span class="sd-status">● Tra cứu tức thì</span>'
-                    '<p style="color:var(--sd-muted);font-size:12px;margin:12px 0 0">Kết quả hiện khớp từ khóa theo tiêu đề. '
-                    'Chức năng xếp hạng độ liên quan đang được hoàn thiện.</p></div>', unsafe_allow_html=True)
-        q = st.text_input("Từ khóa", placeholder="Gõ từ khóa để xem kết quả ngay...", key="search_text")
-        cat_options = ["Tất cả", *categories(docs).keys()]
-        a, b, c = st.columns([1.4, 1, 1])
-        with a:
-            category = st.selectbox("Chủ đề", cat_options, key="search_topic")
-        with b:
-            order = st.selectbox("Sắp xếp", ["Mới nhất", "Tiêu đề A-Z", "Nhiều từ nhất"], key="search_order")
-        with c:
-            max_items = st.selectbox("Hiển thị", [5, 10, 20], index=1, key="search_count")
-    if not q.strip():
-        section("Gợi ý bắt đầu")
-        st.markdown('<div class="sd-empty"><span class="emoji">⌕</span><b>Ý tưởng tiếp theo của bạn bắt đầu ở đây.</b>'
-                    '<div>Nhập từ khóa hoặc chọn chủ đề ở trên để khám phá thư viện.</div></div>', unsafe_allow_html=True)
+          "Xếp hạng tài liệu theo TF-IDF và cosine, sử dụng chỉ mục đảo để chọn ứng viên.")
+    with st.form("ranked_search_form", border=False):
+        q = st.text_input("Từ khóa", placeholder="Ví dụ: xe điện, trí tuệ nhân tạo...", key="search_text")
+        top_k = st.selectbox("Số kết quả Top-K", [5, 10, 20], key="ranked_top_k")
+        submitted = st.form_submit_button("Tìm kiếm", type="primary", width="stretch")
+    state = index_controls("search")
+    quick_search = st.session_state.pop("run_quick_search", False)
+    if submitted or quick_search:
+        started = perf_counter()
+        with st.spinner("Đang tìm tài liệu liên quan..."):
+            try:
+                response = search_service().search(q, top_k)
+            except Exception as exc:
+                response = {"status": "index_unavailable", "results": [], "message": safe_error(exc)}
+        st.session_state["ranked_search"] = {
+            "query": q, "top_k": top_k, "response": response,
+            "latency_ms": (perf_counter() - started) * 1000,
+        }
+    recorded = st.session_state.get("ranked_search")
+    if not recorded:
+        st.info("Nhập truy vấn và nhấn Tìm kiếm. Thư viện vẫn hỗ trợ lọc tiêu đề không dấu.")
         return
-    found = filter_catalog(docs, query=q, category=category, sort_by=order, search_in="Tiêu đề")
-    section(f"{len(found)} kết quả phù hợp")
-    st.caption("Kết quả được lọc theo từ khóa, chưa được xếp hạng theo mức độ liên quan.")
+    response = recorded["response"]
+    status = response["status"]
+    messages = {
+        "empty_query": "Truy vấn rỗng hoặc chỉ còn từ dừng sau xử lý. Hãy nhập từ khóa cụ thể hơn.",
+        "oov_query": "Các từ khóa chưa có trong từ vựng của chỉ mục. Hãy thử từ khác và giữ dấu tiếng Việt.",
+        "empty_corpus": "Thư viện chưa có tài liệu để tìm kiếm.",
+        "index_unavailable": "Chưa có chỉ mục hợp lệ. Kiểm tra dữ liệu và nhấn Xây lại chỉ mục.",
+        "stale_index": "Dữ liệu đã thay đổi. Hãy xây lại chỉ mục rồi tìm kiếm lại.",
+    }
+    if status != "ok":
+        st.info(messages.get(status, "Chưa thể tìm kiếm. Hãy kiểm tra chỉ mục rồi thử lại."))
+        return
+    # A previous result must disappear immediately if a later rerun detects a change.
+    if (state["status"] != "ok" or response.get("index_version") != state.get("index_version")
+            or response.get("corpus_revision") != state.get("corpus_revision")):
+        st.session_state.pop("ranked_search", None)
+        st.warning("Chỉ mục hoặc dữ liệu đã thay đổi. Hãy tìm kiếm lại trên phiên bản hiện tại.")
+        return
+    found = response["results"]
+    section(f"{len(found)} kết quả cho “{recorded['query']}”")
+    st.caption(f"Top-{recorded['top_k']} · cosine giảm dần, hòa điểm theo mã tăng dần · "
+               f"{recorded['latency_ms']:.1f} ms cho API tìm kiếm và metadata, gồm kiểm tra PostgreSQL")
     if not found:
-        st.markdown('<div class="sd-empty"><span class="emoji">🔎</span><b>Chưa tìm thấy tài liệu.</b>'
-                    '<div>Hãy thử từ ngắn hơn, bỏ dấu hoặc đổi chủ đề.</div></div>', unsafe_allow_html=True)
+        st.info("Không có tài liệu nào có điểm dương cho truy vấn này.")
         return
-    for doc in found[:max_items]:
+    for doc in found:
+        st.markdown(f"**Hạng {doc['rank']} · Cosine {doc['score']:.6f}**")
         document_item(doc, "search")
-    if len(found) > max_items:
-        st.caption(f"Đang hiển thị {max_items} / {len(found)}. Thay đổi mục ‘Hiển thị’ để xem thêm.")
+        source = str(doc.get("source_uri") or "")
+        if source.startswith(("https://", "http://")):
+            st.link_button("Nguồn tài liệu", source)
+        else:
+            st.caption("Nguồn: tài liệu tải lên hoặc chưa có đường dẫn xác thực.")
+    if st.toggle("Minh họa cách xếp hạng", key="show_explanation"):
+        chosen = st.selectbox("Tài liệu cần giải thích", [int(d["document_id"]) for d in found],
+                              format_func=lambda doc_id: next(str(d.get("title", doc_id)) for d in found
+                                                              if int(d["document_id"]) == doc_id))
+        with st.spinner("Đang tính đóng góp từ khóa..."):
+            try:
+                detail = search_service().explain(recorded["query"], chosen,
+                                                  expected_version=response["index_version"])
+            except Exception:
+                st.warning("Chưa thể giải thích truy vấn. Hãy kiểm tra dữ liệu và thử lại.")
+                return
+        if detail["status"] != "ok":
+            st.warning("Chưa thể giải thích trên phiên bản này. Hãy tìm kiếm lại.")
+            return
+        st.write("Token truy vấn:", detail["query_tokens"])
+        st.write("Posting list (mã tài liệu theo token):", detail.get("posting_lists", {}))
+        st.caption(f"Hợp posting list: {len(detail.get('candidate_ids', []))} tài liệu ứng viên.")
+        st.dataframe(detail["matched_terms"], hide_index=True, width="stretch")
+        st.latex(r"\operatorname{cosine}(q,d)=\sum_t q_t d_t\quad(\|q\|_2=\|d\|_2=1)")
+        st.caption(f"Tổng đóng góp = {sum(row['contribution'] for row in detail['matched_terms']):.6f}; "
+                   f"cosine = {detail['score']:.6f}.")
 
 
 def library_page(docs: list[dict]) -> None:
@@ -396,13 +500,13 @@ def library_page(docs: list[dict]) -> None:
             document_item(doc, "list")
     left, center, right = st.columns([1, 2, 1], vertical_alignment="center")
     with left:
-        if st.button("← Trước", disabled=page <= 1, key="library_prev", use_container_width=True):
+        if st.button("← Trước", disabled=page <= 1, key="library_prev", width="stretch"):
             st.session_state["catalog_page"] = page - 1
             st.rerun()
     with center:
         st.markdown(f'<div style="text-align:center;color:var(--sd-muted);font-size:12px">Trang <b>{page}</b> / {pages}</div>', unsafe_allow_html=True)
     with right:
-        if st.button("Tiếp →", disabled=page >= pages, key="library_next", use_container_width=True):
+        if st.button("Tiếp →", disabled=page >= pages, key="library_next", width="stretch"):
             st.session_state["catalog_page"] = page + 1
             st.rerun()
 
@@ -437,52 +541,30 @@ def favorites_page(docs: list[dict]) -> None:
 def upload_page() -> None:
     title("BỔ SUNG KIẾN THỨC", "Tài liệu mới, ý tưởng mới.",
           "Kéo thả file văn bản để đưa vào thư viện. Hỗ trợ TXT và PDF có lớp chữ.")
-    st.markdown('<div class="sd-hint">Tài liệu mới được đưa vào <b>bộ sưu tập riêng</b>, không trộn với tập dữ liệu mẫu. '
-                'Sau khi tải lên thành công, thư viện sẽ cập nhật.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sd-hint">Tài liệu mới được thêm vào thư viện. '
+                'Sau khi tải lên thành công, hãy xây lại chỉ mục để tìm kiếm nội dung mới.</div>', unsafe_allow_html=True)
     st.markdown('<div class="sd-panel"><div style="font-size:27px">⇧</div>'
                 '<div style="font-size:18px;font-weight:850;color:var(--sd-text)">Kéo thả để bắt đầu</div>'
                 '<div style="font-size:12px;color:var(--sd-muted)">TXT · PDF có văn bản · tối đa 8 MB mỗi tệp</div></div>', unsafe_allow_html=True)
     uploaded_files = st.file_uploader("Chọn tài liệu", type=["pdf", "txt"], accept_multiple_files=True,
-                                      help="PDF ảnh scan không có lớp văn bản sẽ không được hỗ trợ.")
+                                      help="PDF ảnh scan không có lớp văn bản sẽ không được hỗ trợ.",
+                                      key="upload_files", max_upload_size=8)
     group = st.text_input("Chủ đề cho tài liệu mới", value="Tài liệu cá nhân", max_chars=70)
     if uploaded_files:
         st.caption(f"Đã chọn {len(uploaded_files)} tài liệu. Nhấn nút bên dưới để lưu.")
-    if st.button("⇧ Thêm vào thư viện", type="primary", disabled=not uploaded_files, use_container_width=True):
-        feedback = []
+    if st.button("⇧ Thêm vào thư viện", type="primary", disabled=not uploaded_files, width="stretch"):
         with st.spinner("Đang xử lý tài liệu..."):
-            for uploaded in uploaded_files or []:
-                file_name = Path(uploaded.name.replace("\\", "/")).name
-                if Path(file_name).suffix.lower() not in {".pdf", ".txt"}:
-                    feedback.append((file_name, "error", "Định dạng không được hỗ trợ."))
-                    continue
-                if uploaded.size > 8 * 1024 * 1024:
-                    feedback.append((file_name, "error", "Tệp vượt quá giới hạn 8 MB."))
-                    continue
-                try:
-                    with tempfile.TemporaryDirectory(prefix="smartdoc_upload_") as directory:
-                        local_path = Path(directory) / file_name
-                        local_path.write_bytes(uploaded.getvalue())
-                        result = ingest_document(local_path, title=Path(file_name).stem,
-                                                 corpus_name="user_uploads", category=group.strip() or None)
-                    status = str(result.get("status", "failed"))
-                    if status == "ready":
-                        details = f"Đã lưu #{result.get('document_id')} · {result.get('word_count', 0)} từ"
-                    elif status == "duplicate":
-                        details = "Tệp đã tồn tại."
-                    else:
-                        details = str(result.get("error") or "Không thể xử lý tệp.")
-                    feedback.append((file_name, status, details))
-                except Exception as exc:
-                    feedback.append((file_name, "error", str(exc)))
+            feedback = process_uploads(uploaded_files or [], group,
+                                       ingest_fn=ingest_document,
+                                       mutation_lock=search_service().mutation_lock)
         st.session_state["upload_feedback"] = feedback
-        get_catalog.clear()
-        cached_content.clear()
+        clear_document_cache()
         st.rerun()
     previous = st.session_state.get("upload_feedback", [])
     if previous:
         section("Kết quả xử lý")
         for name, status, detail in previous:
-            message = f"**{name}** — {detail}"
+            message = f"**{name}** — {safe_error(detail)}"
             if status == "ready":
                 st.success(message)
             elif status == "duplicate":
@@ -490,6 +572,7 @@ def upload_page() -> None:
             else:
                 st.error(message)
     st.caption("Khi nội dung thư viện thay đổi, chỉ số phiên bản dữ liệu cũng sẽ thay đổi.")
+    index_controls("upload")
 
 
 def analytics_page(docs: list[dict], revision: int) -> None:
@@ -505,14 +588,14 @@ def analytics_page(docs: list[dict], revision: int) -> None:
         rows = categories(docs)
         if rows:
             frame = pd.DataFrame({"Chủ đề": list(rows), "Tài liệu": list(rows.values())}).set_index("Chủ đề")
-            st.bar_chart(frame, height=320, use_container_width=True)
+            st.bar_chart(frame, height=320, width="stretch")
         lengths = [int(item.get("word_count") or 0) for item in docs]
         avg = sum(lengths) / len(lengths) if lengths else 0
         st.markdown('<div class="sd-panel"><b>Độ dài trung bình:</b> '
                     f'{avg:,.1f} từ / tài liệu <div style="height:8px"></div>'
                     f'<b>Dài nhất:</b> {max(lengths, default=0):,} từ</div>', unsafe_allow_html=True)
-    st.markdown('<div class="sd-hint">Chỉ số chất lượng truy xuất sẽ xuất hiện khi chức năng tìm kiếm xếp hạng '
-                'được tích hợp và đánh giá trên bộ câu hỏi có nhãn.</div>', unsafe_allow_html=True)
+    st.info("Đã tích hợp tìm kiếm TF-IDF. Precision@5 và MRR@20 cần bộ nhãn được nhóm rà soát độc lập; "
+            "chưa có kết quả nghiệm thu chất lượng. Xem hướng dẫn đánh giá trong tài liệu dự án.")
 
 
 # Sidebar controls stay native Streamlit widgets; CSS is presentation only.
@@ -523,15 +606,14 @@ with st.sidebar:
     st.markdown('<div class="sd-side-caption">KHÔNG GIAN LÀM VIỆC</div>', unsafe_allow_html=True)
     for page, glyph in NAV:
         is_active = st.session_state["active_page"] == page
-        if st.button(f"{glyph}  {page}", key=f"nav_{page}", use_container_width=True,
+        if st.button(f"{glyph}  {page}", key=f"nav_{page}", width="stretch",
                      type="primary" if is_active else "secondary"):
             go(page)
     st.divider()
     st.markdown('<div class="sd-side-caption">CÁ NHÂN HÓA</div>', unsafe_allow_html=True)
     st.toggle("🌙 Giao diện tối", key="ui_dark")
-    if st.button("↻ Làm mới thư viện", key="refresh_sidebar", use_container_width=True):
-        get_catalog.clear()
-        cached_content.clear()
+    if st.button("↻ Làm mới thư viện", key="refresh_sidebar", width="stretch"):
+        clear_document_cache()
         st.toast("Đang làm mới dữ liệu...")
         st.rerun()
     st.markdown('<div class="sd-row-gap"></div><div class="sd-side-status">'
@@ -545,20 +627,21 @@ page = st.session_state["active_page"]
 if page == "Tải lên":
     # Upload view does not need a full corpus snapshot on every rerun.
     upload_page()
+elif page == "Tìm kiếm":
+    # Retrieval handles its own fresh snapshot; do not load a cached full catalog first.
+    search_page()
 else:
     try:
         with st.spinner("Đang đồng bộ thư viện..."):
             documents, corpus_revision = get_catalog()
     except Exception as exc:
         title("KẾT NỐI", "Chưa thể mở thư viện", "Hãy kiểm tra dịch vụ dữ liệu rồi thử làm mới.")
-        st.error(str(exc))
+        st.error(safe_error(exc))
         with st.expander("Hướng dẫn kiểm tra"):
             st.code("docker compose ps\npython -m scripts.check_db", language="bat")
         st.stop()
     if page == "Tổng quan":
         dashboard(documents, corpus_revision)
-    elif page == "Tìm kiếm":
-        search_page(documents)
     elif page == "Thư viện":
         library_page(documents)
     elif page == "Đã lưu":

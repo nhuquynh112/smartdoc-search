@@ -1,0 +1,1815 @@
+{
+  "format_version": 1,
+  "corpus_name": "vietonline_news_200",
+  "corpus_revision": 235,
+  "preprocessing_fingerprint": "06b8d7d837d3dc813180aade97d7402e630dabf697ab3f7c561338494a68ca3a",
+  "document_count": 200,
+  "corpus_identity_sha256": "6418841f3a6108e6077d20f423fb1a55c166bc77a29300345c256262a2fbb156",
+  "identity_hash_basis": "sorted source IDs and metadata; excludes clean_text and preprocessing",
+  "retrieval_input_sha256": "780bcfe32de3961b6259cf32cd14f2874fcc0307a4a94c0d37f5848026349f6a",
+  "documents": [
+    {
+      "document_id": 18,
+      "title": "Grab thử nghiệm dịch vụ GrabCar Xe Điện",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "17705"
+    },
+    {
+      "document_id": 19,
+      "title": "Những điểm vượt trội của smartphone Samsung so với iPhone",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "54079"
+    },
+    {
+      "document_id": 20,
+      "title": "Khám phá bộ đôi smartphone chơi game giá từ 1,99 triệu đồng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "54478"
+    },
+    {
+      "document_id": 21,
+      "title": "Cách xử lý Gmail không thông báo khi nhận email trên Android",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "55504"
+    },
+    {
+      "document_id": 22,
+      "title": "MoMo khẳng định 'không liên quan' vụ hack 43 triệu đồng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "56916"
+    },
+    {
+      "document_id": 23,
+      "title": "TikTok bị cấm trong khuôn viên đại học Mỹ",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "56965"
+    },
+    {
+      "document_id": 24,
+      "title": "Hé lộ hai tính năng nổi bật trên iPhone 16 và iPhone 17",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "57162"
+    },
+    {
+      "document_id": 25,
+      "title": "Châu Âu có thể áp đặt các hạn chế đối với ChatGPT",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "57195"
+    },
+    {
+      "document_id": 26,
+      "title": "iPhone 15 Pro là chiếc 'iPhone chơi game' đích thực nhất từ Apple",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "58006"
+    },
+    {
+      "document_id": 27,
+      "title": "Google vá khẩn cấp lỗ hổng nguy hiểm trên trình duyệt Chrome",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "58670"
+    },
+    {
+      "document_id": 28,
+      "title": "Samsung đối mặt với điều chưa từng xảy ra trong lịch sử 55 năm",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "58735"
+    },
+    {
+      "document_id": 29,
+      "title": "Sức nóng iPhone 17 chưa nguội, tin đồn về iPhone 18 đã xuất hiện",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "59051"
+    },
+    {
+      "document_id": 30,
+      "title": "Các điện thoại Galaxy nhận bản cập nhật One UI 8 đầu tiên",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "59867"
+    },
+    {
+      "document_id": 31,
+      "title": "Ericsson tiếp tục dẫn đầu thị trường hạ tầng mạng 5G",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "60711"
+    },
+    {
+      "document_id": 32,
+      "title": "Người dân, doanh nghiệp ‘kết’ chữ ký số từ xa MySign",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "60841"
+    },
+    {
+      "document_id": 33,
+      "title": "Công cụ đánh giá điểm chuẩn Geekbench được nâng cấp",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "60897"
+    },
+    {
+      "document_id": 34,
+      "title": "ZaloPay ra mắt giải pháp 'mã QR đa năng'",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "62215"
+    },
+    {
+      "document_id": 35,
+      "title": "Apple phải đánh đổi những gì để iPhone 17 Air có thiết kế 'siêu mỏng'?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "62268"
+    },
+    {
+      "document_id": 36,
+      "title": "CMC sắp xây dựng tổ hợp nghiên cứu 2.000 tỉ đồng tại Hà Nội",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "62567"
+    },
+    {
+      "document_id": 37,
+      "title": "Giá iPhone 18 tăng cao vì chip xử lý 2nm?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "63407"
+    },
+    {
+      "document_id": 38,
+      "title": "Microsoft công bố phiên bản Windows 11 mới cho cấu hình thấp",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "63913"
+    },
+    {
+      "document_id": 39,
+      "title": "Apple 'làm ngơ' trước sự cố Bluetooth trên dòng iPhone 15?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "64175"
+    },
+    {
+      "document_id": 40,
+      "title": "Ứng dụng giúp xua đuổi muỗi trên iPhone có tác dụng?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "64182"
+    },
+    {
+      "document_id": 41,
+      "title": "Chuyên gia bảo mật cũng có nguy cơ bị quá tải",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "64200"
+    },
+    {
+      "document_id": 42,
+      "title": "Samsung ký ghi nhớ hợp tác ngân hàng Shinhan Việt Nam",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "64379"
+    },
+    {
+      "document_id": 43,
+      "title": "Ngày tết, đừng dùng smartphone nhiều vì lý do này",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "64519"
+    },
+    {
+      "document_id": 44,
+      "title": "Unitel ghi dấu ấn trên hành trình chuyển đổi số ở Lào",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "181798"
+    },
+    {
+      "document_id": 45,
+      "title": "Khan hàng điện thoại 'cục gạch' 4G khi tắt sóng 2G",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "181908"
+    },
+    {
+      "document_id": 46,
+      "title": "iPhone 15 bán chạy trên sân nhà của Samsung nhờ các ưu đãi tiền mặt khủng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "182144"
+    },
+    {
+      "document_id": 47,
+      "title": "Không nhận đặt hàng iPhone 15 series tràn lan",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "182199"
+    },
+    {
+      "document_id": 48,
+      "title": "Chủ tịch VINASA: “Bán dẫn như lương thực, AI là dầu khí trong tương lai”",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "182766"
+    },
+    {
+      "document_id": 49,
+      "title": "Vũ Thư: Tăng cường vận động mở tài khoản nhận chi trả chế độ an sinh xã hội",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "183173"
+    },
+    {
+      "document_id": 50,
+      "title": "Thủ tướng yêu cầu đẩy mạnh thương mại hóa 5G, phát triển vệ tinh viễn thông",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "185054"
+    },
+    {
+      "document_id": 51,
+      "title": "5G sẽ đem lại cơ hội doanh thu mới cho các nhà mạng Việt Nam",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "185297"
+    },
+    {
+      "document_id": 52,
+      "title": "Bộ giải pháp Cloud giúp doanh nghiệp tối ưu vận hành, nâng cao hiệu suất",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "185447"
+    },
+    {
+      "document_id": 53,
+      "title": "Việt Nam đứng đầu bảng bị khủng hoảng tinh thần vì lừa đảo trực tuyến",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "185719"
+    },
+    {
+      "document_id": 54,
+      "title": "Số cơ quan nhà nước, doanh nghiệp bị tấn công qua lỗ hổng Microsoft tăng vọt",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "185778"
+    },
+    {
+      "document_id": 55,
+      "title": "12 dấu hiệu điện thoại của bạn đã bị hack và cách xử lý ngay lập tức",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "185780"
+    },
+    {
+      "document_id": 56,
+      "title": "Hơn 46% cơ quan, doanh nghiệp Việt Nam bị tấn công mạng trong năm nay",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "186005"
+    },
+    {
+      "document_id": 57,
+      "title": "Vũ khí laser Trung Quốc thay đổi cuộc chơi, vô hiệu hoá drone trong chớp mắt",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Khoa học công nghệ",
+      "dataset_id": "187862"
+    },
+    {
+      "document_id": 58,
+      "title": "TP.HCM sẽ công bố điểm thi, điểm chuẩn lớp 10 và lớp 6 vào ngày 23-6",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "2684"
+    },
+    {
+      "document_id": 59,
+      "title": "Học sinh háo hức với trường đại học ‘xịn sò’ ở miền Tây",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "3076"
+    },
+    {
+      "document_id": 60,
+      "title": "Các trường không được ép học sinh tham gia chương trình liên kết",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "4815"
+    },
+    {
+      "document_id": 61,
+      "title": "Cách ngăn bạo lực học đường: Giúp học trò thôi nói xấu nhau",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "4894"
+    },
+    {
+      "document_id": 62,
+      "title": "Đưa tiếng Anh thành ngôn ngữ thứ hai: Giáo viên nước ngoài tham gia được không?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "4973"
+    },
+    {
+      "document_id": 63,
+      "title": "Đại học có nên tự kiểm định chất lượng?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "5667"
+    },
+    {
+      "document_id": 64,
+      "title": "Chuyên gia chia sẻ cách đăng ký xét tuyển ĐH năm 2025 theo quy định mới",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "95595"
+    },
+    {
+      "document_id": 65,
+      "title": "Đêm trực bảo vệ, sáng dự Tư vấn mùa thi cùng con",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "95860"
+    },
+    {
+      "document_id": 66,
+      "title": "Học bổng giúp học sinh Việt Nam được nhận vào Harvard, Princeton, Stanford",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "96235"
+    },
+    {
+      "document_id": 67,
+      "title": "Trường 'nóng' của TP.HCM hết cảnh xếp hàng xuyên đêm mua hồ sơ vào lớp 1",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "100003"
+    },
+    {
+      "document_id": 68,
+      "title": "Bữa ăn bán trú 'không ổn': Phụ huynh đến kiểm tra không cần phải báo trước",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "100062"
+    },
+    {
+      "document_id": 69,
+      "title": "Bà Rịa-Vũng Tàu quyết liệt nghiêm cấm giáo viên dạy thêm",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "100345"
+    },
+    {
+      "document_id": 70,
+      "title": "Sáng nay học sinh TP.HCM đi học lại, nơi nào còn nghỉ tết?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "100486"
+    },
+    {
+      "document_id": 71,
+      "title": "Chàng trai mù đoạt giải nhất hội thi tin học quốc gia",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "101282"
+    },
+    {
+      "document_id": 72,
+      "title": "Không được đào tạo từ xa ngành sức khỏe và sư phạm",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "101338"
+    },
+    {
+      "document_id": 73,
+      "title": "Học phí 100 trường ĐH năm 2025: Nơi thu 10 triệu, nơi 180 triệu đồng/năm",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "101743"
+    },
+    {
+      "document_id": 74,
+      "title": "Nhà trường không nên tăng tải, đưa thêm các chương trình",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "101792"
+    },
+    {
+      "document_id": 75,
+      "title": "'Mùng ba tết thầy' và đạo thầy trò",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "101865"
+    },
+    {
+      "document_id": 76,
+      "title": "Đừng tuyển sinh bất chấp",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "102270"
+    },
+    {
+      "document_id": 77,
+      "title": "Người bà 73 tuổi 15 năm liền đưa đón cháu đi học, đi thi mặc mưa nắng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "102375"
+    },
+    {
+      "document_id": 78,
+      "title": "Trường ĐH Sài Gòn ban hành thông báo mới về xét điểm thi đánh giá năng lực",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "103319"
+    },
+    {
+      "document_id": 79,
+      "title": "Bao nhiêu điểm IELTS được quy đổi thành điểm 10 trong xét tuyển đại học?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "103714"
+    },
+    {
+      "document_id": 80,
+      "title": "Thi tốt nghiệp THPT: Tranh cãi đề tiếng Anh có 2 lựa chọn đúng trong một câu",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "103960"
+    },
+    {
+      "document_id": 81,
+      "title": "Nổ lớn kèm chập điện trong giờ học, 1.400 học sinh phải sơ tán khẩn cấp",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "172695"
+    },
+    {
+      "document_id": 82,
+      "title": "Học phí ngành Kế toán phổ biến khoảng 20 – 50 triệu đồng/năm",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "172912"
+    },
+    {
+      "document_id": 83,
+      "title": "Học phí loạt trường THCS tư ở Hà Nội năm 2025",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "173140"
+    },
+    {
+      "document_id": 84,
+      "title": "Lồng ghép văn hóa học đường trong chương trình môn học",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "173629"
+    },
+    {
+      "document_id": 85,
+      "title": "Ngăn tình trạng học sinh bị lôi kéo dùng ma túy 'núp bóng' thực phẩm, đồ uống",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "173735"
+    },
+    {
+      "document_id": 86,
+      "title": "Hiệu trưởng bị phụ huynh tố cáo được chuyển công tác đến trường khác",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "173874"
+    },
+    {
+      "document_id": 87,
+      "title": "Sở, phòng giáo dục cần ‘đứng ngoài’ các cuộc thi quốc tế",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "174496"
+    },
+    {
+      "document_id": 88,
+      "title": "Thầy giáo bị sa thải vì lời lẽ thô tục, xúc phạm sinh viên",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "174869"
+    },
+    {
+      "document_id": 89,
+      "title": "'Cây cam và môn Toán' giúp nam sinh chinh phục 3 học bổng 16 tỷ đồng ở Mỹ",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "175644"
+    },
+    {
+      "document_id": 90,
+      "title": "Bí quyết hay giúp cậu học trò đất Tổ trở thành á khoa khối B cả nước",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "175945"
+    },
+    {
+      "document_id": 91,
+      "title": "Lời chúc ngày 20/10 cho cô giáo chân thành, ý nghĩa năm 2025",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "176536"
+    },
+    {
+      "document_id": 92,
+      "title": "Các trường học được thu tiền học thêm như thế nào?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "176742"
+    },
+    {
+      "document_id": 93,
+      "title": "Nhốt học sinh vào phòng kín siêu nhỏ, hiệu trưởng, hiệu phó bị đình chỉ",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "177147"
+    },
+    {
+      "document_id": 94,
+      "title": "Đáp án môn Vật lý thi tốt nghiệp THPT năm 2024 - Full 24 mã đề",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "179119"
+    },
+    {
+      "document_id": 95,
+      "title": "Đề thi chuyên Sinh vào lớp 10 trường THPT Chuyên Khoa học Tự nhiên 2023",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "180367"
+    },
+    {
+      "document_id": 96,
+      "title": "Đưa tiếng Anh thành ngôn ngữ thứ hai: Bài học thành công của Philippines",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "181066"
+    },
+    {
+      "document_id": 97,
+      "title": "Học Toán Tiếng Anh Mathlish - Kiến Guru: Cùng trẻ tư duy, hội nhập thế giới",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Giáo dục",
+      "dataset_id": "181135"
+    },
+    {
+      "document_id": 98,
+      "title": "Bỏ đói khối u: Ai chết trước?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "27651"
+    },
+    {
+      "document_id": 99,
+      "title": "Thêm 1 tai nạn chó cắn: Người phụ nữ bị chó cắn rách kết mạc mắt, đứt lệ quản",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "28038"
+    },
+    {
+      "document_id": 100,
+      "title": "Vết loét tự lành: Dấu hiệu cảnh báo bệnh giang mai?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "28675"
+    },
+    {
+      "document_id": 101,
+      "title": "Có thể bị đột tử khi tập gym, vì sao?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "29611"
+    },
+    {
+      "document_id": 102,
+      "title": "Bệnh viện Bạch Mai thành lập khoa da liễu và bỏng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "29798"
+    },
+    {
+      "document_id": 103,
+      "title": "Sốt xuất huyết ngày càng nguy hiểm: nguyên nhân do đâu?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "29850"
+    },
+    {
+      "document_id": 104,
+      "title": "Giám đốc Bệnh viện Phụ sản Hà Nội làm giám đốc Bệnh viện Phụ sản trung ương",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "30252"
+    },
+    {
+      "document_id": 105,
+      "title": "Nắng nóng đỉnh điểm, nhiều nơi trên 40 độ C, cẩn trọng bỏng da",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "30727"
+    },
+    {
+      "document_id": 106,
+      "title": "Chuyên gia hướng dẫn bữa ăn đủ chất trong thời kỳ 'bão giá'",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "30905"
+    },
+    {
+      "document_id": 107,
+      "title": "Vì sao nước pha trà xanh nên có nhiệt độ dưới 100 độ C?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "31234"
+    },
+    {
+      "document_id": 108,
+      "title": "Hút thuốc lá thụ động làm tăng nguy cơ dậy thì sớm ở trẻ",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "31409"
+    },
+    {
+      "document_id": 109,
+      "title": "Những phát kiến mới trong nhãn khoa được giới thiệu tại hội nghị khoa học 2025",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "114547"
+    },
+    {
+      "document_id": 110,
+      "title": "Top 10 sữa rửa mặt cho da dầu mụn sạch, không khô da, kiểm soát dầu tốt",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "115329"
+    },
+    {
+      "document_id": 111,
+      "title": "Hoàn thiện phác đồ với Cold Plasma: Bước tiến trong chăm sóc vết thương khoa học",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "115398"
+    },
+    {
+      "document_id": 112,
+      "title": "Kiến trúc làn da: ‘vật liệu’ nào giúp tái xây nền da, lấp đầy sẹo lõm?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "115886"
+    },
+    {
+      "document_id": 113,
+      "title": "Top 5 kem phục hồi làn da mỏng yếu sau trị liệu được tìm mua nhiều 2024",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "116089"
+    },
+    {
+      "document_id": 114,
+      "title": "7 tác dụng của chạy bộ đối với sức khỏe và tinh thần, bạn biết chưa?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "116163"
+    },
+    {
+      "document_id": 115,
+      "title": "Top những mẫu ghế nail spa được ưa chuộng hiện nay",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "116234"
+    },
+    {
+      "document_id": 116,
+      "title": "Mọi điều bạn cần biết về traptox, 'chấn động' trong làm đẹp cho cổ, vai thon",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "117333"
+    },
+    {
+      "document_id": 117,
+      "title": "Cách kiểm tra đột quỵ hay say rượu bia do quá chén dịp Tết",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "205148"
+    },
+    {
+      "document_id": 118,
+      "title": "4 dấu hiệu dễ bị bỏ qua của tiền ung thư đại trực tràng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "205252"
+    },
+    {
+      "document_id": 119,
+      "title": "6 nguyên nhân gây đau gót chân và cách phòng tránh",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "205290"
+    },
+    {
+      "document_id": 120,
+      "title": "Dấu hiệu mắc bệnh lóc động mạch chủ type A cấp tính",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "205708"
+    },
+    {
+      "document_id": 121,
+      "title": "Sai lầm phổ biến đang tàn phá hệ tiêu hóa",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "205729"
+    },
+    {
+      "document_id": 122,
+      "title": "Căn bệnh đột quỵ khiến doanh nhân trẻ qua đời ở tuổi 34",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "206149"
+    },
+    {
+      "document_id": 123,
+      "title": "Hà Nội thúc đẩy phòng ngừa bệnh dại, hỗ trợ chuyển đổi kinh doanh thịt chó mèo",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "206775"
+    },
+    {
+      "document_id": 124,
+      "title": "Bộ Y tế cảnh báo về thực phẩm chức năng An vị Mộc Linh từng bị vứt đống ở vỉa hè",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "207108"
+    },
+    {
+      "document_id": 125,
+      "title": "Dùng thuốc giảm cân mua trên mạng, thiếu nữ 16 tuổi bị suy gan cấp",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "207214"
+    },
+    {
+      "document_id": 126,
+      "title": "MediUSA lan tỏa thông điệp bảo vệ sức khoẻ từ bên trong",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "207359"
+    },
+    {
+      "document_id": 127,
+      "title": "Cuộc điện thoại ngắn ngủi của con dâu với bố mẹ chồng hồi sinh nhiều người",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "207508"
+    },
+    {
+      "document_id": 128,
+      "title": "Sữa Hikid bị Bộ Y tế đề nghị kiểm tra vì quảng cáo '100g bằng 20 lít sữa tươi'",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "207661"
+    },
+    {
+      "document_id": 129,
+      "title": "Bên trong căn phòng tĩnh lặng tại Trung tâm truy tìm tế bào ung thư",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "207935"
+    },
+    {
+      "document_id": 130,
+      "title": "Bệnh viện Mắt Sài Gòn Sông Hàn - địa chỉ khám mắt tại TP. Đà Nẵng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "208198"
+    },
+    {
+      "document_id": 131,
+      "title": "Nữ y tá bị gọi là ‘kẻ đào mỏ’ vì hẹn hò chàng trai biến dạng mặt",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "210363"
+    },
+    {
+      "document_id": 132,
+      "title": "Đang khỏe mạnh, người đàn ông bất ngờ ngã khụy, suy giảm ý thức ngay sau bữa cơm",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "211279"
+    },
+    {
+      "document_id": 133,
+      "title": "Tốn 150 triệu đồng 'nâng ngực không phẫu thuật', người phụ nữ bị tiêm chất lạ",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "211516"
+    },
+    {
+      "document_id": 134,
+      "title": "8 tác hại của thuốc lá với sức khoẻ làn da",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "211679"
+    },
+    {
+      "document_id": 135,
+      "title": "Uống trà sai cách gây hại cho cơ thể",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "211812"
+    },
+    {
+      "document_id": 136,
+      "title": "Nguyên nhân phổ biến khiến trẻ chậm tăng trưởng chiều cao",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "212186"
+    },
+    {
+      "document_id": 137,
+      "title": "Những thực phẩm dễ nhiễm khuẩn Salmonella",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Sức khỏe",
+      "dataset_id": "212750"
+    },
+    {
+      "document_id": 138,
+      "title": "TP.HCM: Khách ùn ùn đến mua cua Cà Mau ở lễ hội, người bán bất ngờ vì 'hàng lên là hết'",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "17848"
+    },
+    {
+      "document_id": 139,
+      "title": "Xếp hạng trend 2023: Bánh đồng xu, trà chanh giã tay, mì thanh long... trend nào hot nhất?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "19136"
+    },
+    {
+      "document_id": 140,
+      "title": "Hiện đại hóa hạ tầng công nghệ thông tin: nền móng cho tăng trưởng dài hạn",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "19706"
+    },
+    {
+      "document_id": 141,
+      "title": "Đường nào đến an ninh lương thực trong bối cảnh biến đổi khí hậu?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "20457"
+    },
+    {
+      "document_id": 142,
+      "title": "PVCFC đạt cú đúp giải thưởng Industrie 4.0 Awards 2025",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "21177"
+    },
+    {
+      "document_id": 143,
+      "title": "Tranh luậnGiao dịch tiền mặt hay chuyển khoản đều được, nhưng không thể lợi dụng để trốn thuế",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "21298"
+    },
+    {
+      "document_id": 144,
+      "title": "Trình Quốc hội giảm thuế VAT đến hết 2026, dự kiến giảm thu khoảng 121.740 tỉ đồng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "24224"
+    },
+    {
+      "document_id": 145,
+      "title": "Hé lộ danh sách 33 doanh nghiệp nộp thuế trên 1.000 tỉ đồng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "24846"
+    },
+    {
+      "document_id": 146,
+      "title": "Sếp doanh nghiệp địa ốc bỏ túi gần nửa tỉ đồng mỗi tháng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "25287"
+    },
+    {
+      "document_id": 147,
+      "title": "Gần 10.000 tỉ đồng làm hơn 3,5 km đường Vành đai 2 TP.HCM",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "104459"
+    },
+    {
+      "document_id": 148,
+      "title": "Choáng: Xe biển số ngũ quý bị dính 46 lỗi phạt nguội",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "104481"
+    },
+    {
+      "document_id": 149,
+      "title": "Nhiều quy định mới về hóa đơn 'gây khó, rủi ro' cho doanh nghiệp",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "105640"
+    },
+    {
+      "document_id": 150,
+      "title": "21 km Vành đai 3 TP.HCM sẽ vượt tiến độ 4 tháng, thông xe ngay năm nay",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "106555"
+    },
+    {
+      "document_id": 151,
+      "title": "Thắp sáng điện lên Trường Sa",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "108961"
+    },
+    {
+      "document_id": 152,
+      "title": "Bảo hiểm DB (Hàn Quốc) ký hợp đồng mua 75% cổ phần Bảo hiểm BSH",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "109284"
+    },
+    {
+      "document_id": 153,
+      "title": "Giá vàng hôm nay 20.8.2025: Giảm nhưng vẫn cao hơn thế giới 19,2 triệu đồng/lượng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "110300"
+    },
+    {
+      "document_id": 154,
+      "title": "Giá USD hôm nay 11.12.2024: Trong nước đồng loạt giảm",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "112631"
+    },
+    {
+      "document_id": 155,
+      "title": "Giá vàng hôm nay 22.7.2023: Đi lùi khi đồng USD bật tăng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "113860"
+    },
+    {
+      "document_id": 156,
+      "title": "Chứng khoán lên sát đỉnh: Bức tranh tươi sáng với những 'con số đẹp'",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "190033"
+    },
+    {
+      "document_id": 157,
+      "title": "Mua nhà 3 đến 4 tỷ, người trẻ cần tích cóp 20-25 năm",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "190439"
+    },
+    {
+      "document_id": 158,
+      "title": "Dự báo giá vàng 10 ngày tới: Thế giới tăng không dừng, nhẫn và SJC vẫn hạ nhiệt",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "191287"
+    },
+    {
+      "document_id": 159,
+      "title": "Ngân hàng Nhà nước tiếp tục kiểm soát chênh lệch giá vàng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "192165"
+    },
+    {
+      "document_id": 160,
+      "title": "Cổ phiếu bị cảnh báo, đại gia phố núi tìm cách thoát lỗ",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "194647"
+    },
+    {
+      "document_id": 161,
+      "title": "HSBC: Việt Nam có thể cắt giảm thêm lãi suất, còn rủi ro lạm phát",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "194690"
+    },
+    {
+      "document_id": 162,
+      "title": "Kinh tế cuối năm: Cú hích 21 tỷ USD, chờ xuất khẩu tăng tốc",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "194766"
+    },
+    {
+      "document_id": 163,
+      "title": "Bản tin tài chính sáng 28/4: Giá vàng quay đầu giảm, dầu lao dốc, USD phục hồi",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "195200"
+    },
+    {
+      "document_id": 164,
+      "title": "Hãng bảo hiểm nói gì về trách nhiệm vụ gửi tiền vào Ngân hàng SCB ?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "195626"
+    },
+    {
+      "document_id": 165,
+      "title": "Chỉ đạo nóng liên quan giá vàng; mánh khóe buôn gần 600 loại sữa giả",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "196325"
+    },
+    {
+      "document_id": 166,
+      "title": "'Tương lai, nhắc đến đổi mới sáng tạo, thế giới sẽ nói ngay tới Việt Nam'",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "196785"
+    },
+    {
+      "document_id": 167,
+      "title": "Ngành bia gặp khó, nhà máy Heineken Quảng Nam tạm dừng hoạt động",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "196882"
+    },
+    {
+      "document_id": 168,
+      "title": "Điện nơi thừa nơi thiếu là điều rất đau, truy trách nhiệm của ai?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "197905"
+    },
+    {
+      "document_id": 169,
+      "title": "Hàng nghìn tỷ đồng trong các dự án 'mắc kẹt' bởi quy định phòng cháy chữa cháy",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "198038"
+    },
+    {
+      "document_id": 170,
+      "title": "Giá xăng RON95 giảm mạnh về mốc 19.000 đồng/lít",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "198249"
+    },
+    {
+      "document_id": 171,
+      "title": "Doanh nhân Hoàng Hường bị khởi tố: Bí mật mô hình kinh doanh siêu tốc",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "198873"
+    },
+    {
+      "document_id": 172,
+      "title": "CEO Jemmia Diamond chia sẻ chiến lược chinh phục thị trường quốc tế",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "199011"
+    },
+    {
+      "document_id": 173,
+      "title": "Fidovn nhận ‘cú đúp' giải thưởng tại Vietnam Leading Brands 2025",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "199742"
+    },
+    {
+      "document_id": 174,
+      "title": "10 năm bay Singapore bằng VietJet: Quà tặng 10.000 vé từ 0 đồng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "201467"
+    },
+    {
+      "document_id": 175,
+      "title": "Phát hiện hơn 2 tấn gạo nghi giả thương hiệu Gạo Ông Cua ở Hà Nội",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "201678"
+    },
+    {
+      "document_id": 176,
+      "title": "Sự thật đuôi tôm hùm Úc giá 350.000 đồng/kg",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "201841"
+    },
+    {
+      "document_id": 177,
+      "title": "HABECO ủng hộ 1,35 tỷ đồng hỗ trợ đồng bào miền Bắc khắc phục hậu quả bão lũ",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Kinh doanh",
+      "dataset_id": "202726"
+    },
+    {
+      "document_id": 178,
+      "title": "FPT Play chính thức sở hữu bản quyền Giải Ngoại hạng Anh kể từ ngày 1-1-2026",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "36556"
+    },
+    {
+      "document_id": 179,
+      "title": "Á quân Olympic: 'Ở SEA Games, chỉ cần đưa HCV cho Thái Lan là xong'",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "38131"
+    },
+    {
+      "document_id": 180,
+      "title": "Năm ngoại binh ‘sấm sét’ tại Giải bóng chuyền vô địch quốc gia 2025",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "40457"
+    },
+    {
+      "document_id": 181,
+      "title": "Kyo York thích đạp xe, mê khám phá những cung đường mới",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "41138"
+    },
+    {
+      "document_id": 182,
+      "title": "Đội tuyển Việt Nam vượt Indonesia 13 bậc trên bảng xếp hạng FIFA, nhưng vẫn cách xa Thái",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "123228"
+    },
+    {
+      "document_id": 183,
+      "title": "ĐKVĐ Thái Lan tạo cơn cuồng phong ở sân Hàng Đẫy, Campuchia gây sốc",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "124549"
+    },
+    {
+      "document_id": 184,
+      "title": "Báo Indonesia dự báo nóng: Malaysia đối mặt cơn ác mộng khi đại chiến đội tuyển Việt Nam",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "125055"
+    },
+    {
+      "document_id": 185,
+      "title": "Nations League không có trận đấu thừa!",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "125283"
+    },
+    {
+      "document_id": 186,
+      "title": "U.23 Việt Nam hội quân, có gì khác lạ so với lúc giành HCV SEA Games: Khuất Văn Khang bảo là…",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "126697"
+    },
+    {
+      "document_id": 187,
+      "title": "Nam Định chiêu mộ tuyển thủ Palestine, nhân sự mùa mới không chỉ có tiền đạo cao hơn 2 m",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "126850"
+    },
+    {
+      "document_id": 188,
+      "title": "Chủ tịch AFF cảm ơn Chủ tịch VFF Trần Quốc Tuấn tại sự kiện quan trọng của bóng đá khu vực",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "127130"
+    },
+    {
+      "document_id": 189,
+      "title": "Công Phượng trở lại thăm HAGL, ký ức xưa dội về…",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "128189"
+    },
+    {
+      "document_id": 190,
+      "title": "Billiards: Tại sao hàng chục cơ thủ Việt Nam bị liên đoàn thế giới cấm thi đấu?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "129779"
+    },
+    {
+      "document_id": 191,
+      "title": "Giải golf HTV Swing Cup 2025 hấp dẫn thể thức đấu đồng đội đối kháng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "129909"
+    },
+    {
+      "document_id": 192,
+      "title": "Các ngôi sao điền kinh Việt Nam tạo kịch tính tại VTV Phú Quốc Marathon",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "131715"
+    },
+    {
+      "document_id": 193,
+      "title": "Kết quả bóng đá Macarthur vs CAHN - AFC Champions League Two",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "219228"
+    },
+    {
+      "document_id": 194,
+      "title": "Tuyển Việt Nam đấu Campuchia: Màn chào sân của các tân binh",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "220592"
+    },
+    {
+      "document_id": 195,
+      "title": "Báo Hàn mong HLV Kim Sang Sik và tuyển Việt Nam thắng Thái Lan",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "221081"
+    },
+    {
+      "document_id": 196,
+      "title": "Người hâm mộ Việt Nam nhận tin cực vui trước Asian Cup 2024",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "223318"
+    },
+    {
+      "document_id": 197,
+      "title": "HLV Hà Nội: Tuấn Hải hay hơn Hoàng Đức ở cuộc đua Quả bóng vàng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "223390"
+    },
+    {
+      "document_id": 198,
+      "title": "Kết quả bóng đá Khánh Hòa 0-2 Thanh Hóa, kết quả V-League",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "223469"
+    },
+    {
+      "document_id": 199,
+      "title": "SEA Games 32: Những quyết định khó đoán từ HLV Troussier",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "224829"
+    },
+    {
+      "document_id": 200,
+      "title": "U20 Việt Nam chốt danh sách đi UAE",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "225371"
+    },
+    {
+      "document_id": 201,
+      "title": "Vì sao bầu Đức và HAGL xuống nước vụ 'đụng' tài trợ VPF?",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "225452"
+    },
+    {
+      "document_id": 202,
+      "title": "Tin tức về chuyển nhượng 26/9: MU ký Branthwaite, Arsenal lấy Vinicius",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "226490"
+    },
+    {
+      "document_id": 203,
+      "title": "Kết quả bóng đá Juventus vs Dortmund - Cúp C1 2025/26",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "226585"
+    },
+    {
+      "document_id": 204,
+      "title": "Thần đồng MU tuyên bố giúp U17 Thái Lan thắng U17 Saudi Arabia",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "227861"
+    },
+    {
+      "document_id": 205,
+      "title": "Morata nhập viện khẩn cấp vì chấn thương vùng đầu nghiêm trọng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "228854"
+    },
+    {
+      "document_id": 206,
+      "title": "Real Madrid vs Atalanta, Siêu cúp châu Âu: Gọi tên Mbappe",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "229482"
+    },
+    {
+      "document_id": 207,
+      "title": "Kết quả bóng đá Paraguay 1-4 Brazil - Copa America 2024",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "229907"
+    },
+    {
+      "document_id": 208,
+      "title": "Effenberg khuyên Kroos không trở lại đội tuyển Đức",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "231105"
+    },
+    {
+      "document_id": 209,
+      "title": "Kết quả Argentina 0-2 Uruguay, cơn giận của Messi",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "231375"
+    },
+    {
+      "document_id": 210,
+      "title": "Tin bóng đá 5/5: Liverpool hạ MU vụ Mac Allister, Chelsea ký Mane",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "232713"
+    },
+    {
+      "document_id": 211,
+      "title": "Pep Guardiola muốn Haaland phá vỡ kỷ lục nhưng Man City cần cúp",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "232942"
+    },
+    {
+      "document_id": 212,
+      "title": "Kết quả U20 Nhật Bản vs U20 Trung Quốc | U20 châu Á 2023",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "233241"
+    },
+    {
+      "document_id": 213,
+      "title": "Tin tức về chuyển nhượng 9/5: MU ký Mbeumo, Man City lấy Paqueta",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "233340"
+    },
+    {
+      "document_id": 214,
+      "title": "Bảng tổng sắp huy chương Olympic 2024 hôm nay 8/8",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "235836"
+    },
+    {
+      "document_id": 215,
+      "title": "Bảng tổng sắp huy chương Olympic 2024 hôm nay 4/8",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "235855"
+    },
+    {
+      "document_id": 216,
+      "title": "Dương Quốc Hoàng lại thua ngược, dừng bước tại giải thế giới triệu USD",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "235960"
+    },
+    {
+      "document_id": 217,
+      "title": "Cúp xe đạp TH TPHCM 2024: Trần Tuấn Kiệt lần thứ 3 thắng chặng",
+      "source_uri": "https://huggingface.co/datasets/VLUS06/VietOnlineNews",
+      "corpus_name": "vietonline_news_200",
+      "category": "Thể thao",
+      "dataset_id": "236041"
+    }
+  ],
+  "missing_original_document_ids": [
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51,
+    52,
+    53,
+    54,
+    55,
+    56,
+    57,
+    58,
+    59,
+    60,
+    61,
+    62,
+    63,
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    75,
+    76,
+    77,
+    78,
+    79,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99,
+    100,
+    101,
+    102,
+    103,
+    104,
+    105,
+    106,
+    107,
+    108,
+    109,
+    110,
+    111,
+    112,
+    113,
+    114,
+    115,
+    116,
+    117,
+    118,
+    119,
+    120,
+    121,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    128,
+    129,
+    130,
+    131,
+    132,
+    133,
+    134,
+    135,
+    136,
+    137,
+    138,
+    139,
+    140,
+    141,
+    142,
+    143,
+    144,
+    145,
+    146,
+    147,
+    148,
+    149,
+    150,
+    151,
+    152,
+    153,
+    154,
+    155,
+    156,
+    157,
+    158,
+    159,
+    160,
+    161,
+    162,
+    163,
+    164,
+    165,
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    172,
+    173,
+    174,
+    175,
+    176,
+    177,
+    178,
+    179,
+    180,
+    181,
+    182,
+    183,
+    184,
+    185,
+    186,
+    187,
+    188,
+    189,
+    190,
+    191,
+    192,
+    193,
+    194,
+    195,
+    196,
+    197,
+    198,
+    199,
+    200,
+    201,
+    202,
+    203,
+    204,
+    205,
+    206,
+    207,
+    208,
+    209,
+    210,
+    211,
+    212,
+    213,
+    214,
+    215,
+    216,
+    217
+  ],
+  "limitation": "Some original files are unavailable. Identity hash verifies source IDs/metadata, not original bytes; retrieval_input_sha256 freezes all indexed clean_text."
+}

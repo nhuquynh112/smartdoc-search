@@ -24,7 +24,7 @@ def filter_catalog(
     docs: list[dict], query: str = "", category: str = "Tất cả", *,
     sort_by: str = "Mới nhất", search_in: str = "Tiêu đề",
 ) -> list[dict]:
-    needle = fold(query)
+    needle = fold(query).replace("_", " ")
     filtered: list[dict] = []
     for doc in docs:
         if category != "Tất cả" and category_label(doc) != category:
@@ -32,7 +32,7 @@ def filter_catalog(
         fields = [doc.get("title", "")]
         if search_in == "Tiêu đề & nội dung đã xử lý":
             fields.append(doc.get("clean_text", ""))
-        if needle and not any(needle in fold(part) for part in fields):
+        if needle and not any(needle in fold(part).replace("_", " ") for part in fields):
             continue
         filtered.append(doc)
     if sort_by == "Tiêu đề A-Z":

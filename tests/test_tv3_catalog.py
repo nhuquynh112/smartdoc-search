@@ -29,5 +29,10 @@ class CatalogTests(unittest.TestCase):
         self.assertEqual((page, total, len(rows)), (2, 2, 1))
         self.assertEqual(page_slice([], 0, 5), ([], 1, 1))
 
+    def test_vietnamese_compound_tokens(self):
+        docs = [{"document_id": 1, "title": "Bài viết", "clean_text": "năng_lượng sạch"}]
+        for query in ("nang luong", "năng_lượng"):
+            self.assertEqual(len(filter_catalog(docs, query, search_in="Tiêu đề & nội dung đã xử lý")), 1)
+
 if __name__ == "__main__":
     unittest.main()

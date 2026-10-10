@@ -36,3 +36,6 @@ Thumbs.db
 storage/quarantine/
 
 data/tv2_index/
+
+# Local full-text handout for independent relevance judging
+evaluation/judging_documents.csv
