@@ -546,3 +546,29 @@ Use [the database transfer guide](docs/database_transfer.md) to share all 200 re
 ### Recovery and Storage Reconciliation
 
 See [recovery procedures](docs/recovery.md). Use `python -m scripts.reconcile_storage` for a read-only audit; add `--quarantine` to move unreferenced files into recoverable storage. Retry failed same-hash inputs with `python -m scripts.ingest_documents path/to/file.pdf --retry-failed`. Ready records are never overwritten by retry.
+
+### TV2 Retrieval Engine Tests
+
+Run the TV2 retrieval-focused test suites from the repository root with the project virtual environment activated:
+
+```powershell
+python -m pytest -q tests/test_tfidf_engine.py tests/test_inverted_index.py tests/test_search_engine.py tests/test_index_manager.py tests/test_retrieval_engine.py
+```
+
+Run the complete test suite with:
+
+```powershell
+python -m pytest
+```
+
+The full suite includes database-backed ingestion and recovery tests. These tests require a valid local `DATABASE_URL` and a running PostgreSQL instance. If PostgreSQL is not configured, those tests may fail before exercising their intended behavior.
+
+To run the full suite while excluding the three database-dependent tests currently identified in the local environment:
+
+```powershell
+python -m pytest -q -k "not test_ready_duplicate_failed_and_delete and not test_quarantine_preserves_files and not test_storage_failure_retry_keeps_id"
+```
+
+This exclusion is for local verification only; it does not replace database integration testing.
+
+The retrieval-focused tests verify TF-IDF behavior, inverted-index retrieval, ranking, index management, and the public retrieval API. A passing test suite does not replace the hand-calculated TF-IDF/cosine example or the labeled-query evaluation required for final acceptance.
