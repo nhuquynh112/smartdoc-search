@@ -268,6 +268,87 @@ class RetrievalEngine:
             corpus_revision=current_revision,
         )
 
+    def explain_result(self, query: str, document_id: int) -> dict[str, Any]:
+        """Explain a document's TF-IDF cosine score for a query.
+
+        `matched_terms` contains each shared term's query/document TF-IDF
+        weights and their product. Since both vectors use L2 normalization,
+        the sum of contributions equals the cosine similarity (up to floating
+        point rounding).
+        """
+        if not isinstance(query, str):
+            raise InvalidRetrievalInputError("query must be a string")
+        if isinstance(document_id, bool) or not isinstance(document_id, int):
+            raise InvalidRetrievalInputError("document_id must be an integer")
+
+        # Reuse the public search path to enforce current-corpus and active-index
+        # freshness checks before explaining any score.
+        search_response = self.search_query(query, top_k=MAX_TOP_K)
+        processed_query = self.preprocessing_fn(query)
+        query_tokens = processed_query.split()
+        base = {
+            "status": search_response["status"],
+            "message": search_response["message"],
+            "document_id": document_id,
+            "query_tokens": query_tokens,
+            "matched_terms": [],
+            "score": None,
+            "index_version": search_response["index_version"],
+            "corpus_revision": search_response["corpus_revision"],
+        }
+        if search_response["status"] != "ok":
+            return base
+
+        try:
+            managed_index = self.index_manager.load_active()
+            artifacts = managed_index.artifacts
+            try:
+                row_index = artifacts.ordered_document_ids.index(document_id)
+            except ValueError:
+                base["status"] = "document_not_found"
+                base["message"] = f"Không tìm thấy document_id={document_id} trong index hiện tại."
+                return base
+
+            if artifacts.matrix.shape[1] == 0:
+                base["status"] = "oov_query"
+                base["message"] = "Index hiện tại không có vocabulary để giải thích."
+                return base
+
+            query_vector = artifacts.vectorizer.transform([processed_query]).tocsr()
+            document_vector = artifacts.matrix.getrow(row_index).tocsr()
+            query_weights = {
+                str(artifacts.vectorizer.get_feature_names_out()[column]): float(weight)
+                for column, weight in zip(query_vector.indices, query_vector.data)
+            }
+            document_weights = {
+                str(artifacts.vectorizer.get_feature_names_out()[column]): float(weight)
+                for column, weight in zip(document_vector.indices, document_vector.data)
+            }
+
+            matched_terms = []
+            for term in sorted(query_weights.keys() & document_weights.keys()):
+                query_weight = query_weights[term]
+                document_weight = document_weights[term]
+                matched_terms.append({
+                    "term": term,
+                    "query_weight": query_weight,
+                    "document_weight": document_weight,
+                    "contribution": query_weight * document_weight,
+                })
+
+            score = float((document_vector @ query_vector.T).toarray()[0, 0])
+            base.update({
+                "status": "ok",
+                "message": "Giải thích điểm số thành công.",
+                "matched_terms": matched_terms,
+                "score": score,
+            })
+            return base
+        except Exception as exc:
+            base["status"] = "index_unavailable"
+            base["message"] = f"Không thể giải thích kết quả: {exc}"
+            return base
+
 
 _default_engine: RetrievalEngine | None = None
 
@@ -278,3 +359,11 @@ def search_query(query: str, top_k: int = DEFAULT_TOP_K) -> dict[str, Any]:
     if _default_engine is None:
         _default_engine = RetrievalEngine()
     return _default_engine.search_query(query, top_k)
+
+
+def explain_result(query: str, document_id: int) -> dict[str, Any]:
+    """Module-level API for TV3: ``explain_result(query, document_id)``."""
+    global _default_engine
+    if _default_engine is None:
+        _default_engine = RetrievalEngine()
+    return _default_engine.explain_result(query, document_id)

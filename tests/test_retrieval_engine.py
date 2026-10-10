@@ -143,3 +143,48 @@ def test_invalid_query_type_raises(tmp_path):
     engine, _, _ = make_engine(tmp_path)
     with pytest.raises(InvalidRetrievalInputError):
         engine.search_query(None)  # type: ignore[arg-type]
+
+
+def test_explain_result_returns_term_weights_and_contributions(tmp_path):
+    engine, manager, _ = make_engine(tmp_path)
+    manager.build_and_activate()
+
+    explanation = engine.explain_result("alpha beta", 1)
+
+    assert explanation["status"] == "ok"
+    assert explanation["document_id"] == 1
+    assert explanation["query_tokens"] == ["alpha", "beta"]
+    assert explanation["score"] == pytest.approx(
+        sum(term["contribution"] for term in explanation["matched_terms"])
+    )
+    assert {term["term"] for term in explanation["matched_terms"]} == {"alpha", "beta"}
+    assert all(
+        term["contribution"] == pytest.approx(term["query_weight"] * term["document_weight"])
+        for term in explanation["matched_terms"]
+    )
+
+
+def test_explain_result_unknown_document_id(tmp_path):
+    engine, manager, _ = make_engine(tmp_path)
+    manager.build_and_activate()
+
+    explanation = engine.explain_result("alpha", 999)
+    assert explanation["status"] == "document_not_found"
+    assert explanation["matched_terms"] == []
+    assert explanation["score"] is None
+
+
+def test_explain_result_rejects_invalid_document_id(tmp_path):
+    engine, _, _ = make_engine(tmp_path)
+    with pytest.raises(InvalidRetrievalInputError):
+        engine.explain_result("alpha", True)
+
+
+def test_explain_result_respects_stale_index_guard(tmp_path):
+    engine, manager, snapshot_ref = make_engine(tmp_path)
+    manager.build_and_activate()
+    snapshot_ref["value"] = make_snapshot(revision=8)
+
+    explanation = engine.explain_result("alpha", 1)
+    assert explanation["status"] == "stale_index"
+    assert explanation["matched_terms"] == []
