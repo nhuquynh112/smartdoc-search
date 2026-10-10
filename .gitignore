@@ -34,3 +34,5 @@ Thumbs.db
 
 # Recoverable local storage quarantine
 storage/quarantine/
+
+data/tv2_index/
