@@ -380,3 +380,113 @@ python -m pytest -q
 ```
 
 *Lưu ý: tên đường dẫn test ở trên theo cấu trúc module trong dự án; nếu tên file thực tế khác, thay bằng đúng tên file trong thư mục `tests/`.*
+
+## 8. Hướng dẫn xây dựng index và thực hiện tìm kiếm
+
+### 8.1. Điều kiện trước khi chạy
+
+- Đã cài đặt các thư viện trong `requirements.txt`.
+- Đã cấu hình `DATABASE_URL` trong file `.env` theo hướng dẫn của dự án.
+- PostgreSQL đang hoạt động và TV1 có thể cung cấp dữ liệu qua `load_corpus_snapshot()`.
+- Corpus cần sử dụng là `vietonline_news_200`.
+
+### 8.2. Build index và gọi search
+
+Tạo file `scripts/tv2_build_and_search.py` tại thư mục gốc của repository:
+
+```python
+from smartdoc.index_manager import IndexManager
+from smartdoc.retrieval_engine import RetrievalEngine
+
+CORPUS_NAME = "vietonline_news_200"
+
+def main():
+    # 1. Xây dựng và kích hoạt index từ snapshot của TV1.
+    manager = IndexManager()
+    managed_index = manager.build_and_activate(
+        corpus_name=CORPUS_NAME
+    )
+
+    print("Build index thành công.")
+    print("Index version:", managed_index.version_id)
+    print("Document count:", managed_index.artifacts.document_count)
+    print("Corpus revision:", managed_index.artifacts.corpus_revision)
+
+    # 2. Khởi tạo Retrieval Engine với cùng corpus.
+    engine = RetrievalEngine(corpus_name=CORPUS_NAME)
+
+    # 3. Thực hiện tìm kiếm.
+    response = engine.search_query(
+        query="giáo dục và công nghệ",
+        top_k=5,
+    )
+
+    print("\nStatus:", response["status"])
+    print("Message:", response["message"])
+    print("Index version:", response["index_version"])
+    print("Corpus revision:", response["corpus_revision"])
+
+    # 4. Hiển thị kết quả.
+    for item in response["results"]:
+        print(
+            f'Rank: {item["rank"]} | '
+            f'Document ID: {item["document_id"]} | '
+            f'Score: {item["score"]:.6f}'
+        )
+
+if __name__ == "__main__":
+    main()
+```
+
+Chạy từ thư mục gốc của repository:
+
+```powershell
+python scripts/tv2_build_and_search.py
+```
+
+### 8.3. Cơ chế hoạt động
+
+Quy trình thực hiện gồm các bước:
+
+1. `IndexManager` gọi API snapshot của TV1 để lấy danh sách tài liệu và metadata phiên bản corpus.
+2. TV2 fit TF-IDF từ `clean_text`, xây dựng inverted index và lưu các artifact theo phiên bản.
+3. TV2 kiểm tra artifact đã lưu rồi cập nhật `active_index.json` để kích hoạt index mới.
+4. `RetrievalEngine.search_query()` tiền xử lý truy vấn bằng pipeline của TV1, kiểm tra trạng thái corpus và nạp index đang hoạt động.
+5. Search engine lấy các tài liệu ứng viên từ inverted index, tính cosine similarity và trả về tối đa `top_k` kết quả được xếp hạng.
+
+### 8.4. Diễn giải kết quả
+
+API tìm kiếm trả về một dictionary gồm:
+
+| Trường | Ý nghĩa |
+|---|---|
+| `status` | Trạng thái xử lý |
+| `message` | Thông báo tương ứng |
+| `results` | Danh sách tài liệu được xếp hạng |
+| `index_version` | Phiên bản index được sử dụng |
+| `corpus_revision` | Phiên bản corpus hiện tại |
+
+Mỗi phần tử trong `results` gồm `rank`, `document_id` và `score`.
+
+- `ok`: tìm kiếm được thực hiện thành công; danh sách kết quả có thể rỗng nếu không có tài liệu phù hợp.
+- `empty_query`: truy vấn rỗng sau tiền xử lý.
+- `oov_query`: không có từ truy vấn nào thuộc vocabulary của index.
+- `empty_corpus`: corpus không có tài liệu để tìm kiếm.
+- `index_unavailable`: không thể kiểm tra hoặc nạp index.
+- `stale_index`: index không đồng bộ với corpus hiện tại; cần build lại index.
+
+### 8.5. Kiểm thử
+
+Có thể kiểm tra từng thành phần bằng các lệnh:
+
+```powershell
+python -m pytest -q tests/test_tfidf_engine.py
+python -m pytest -q tests/test_inverted_index.py
+python -m pytest -q tests/test_search_engine.py
+python -m pytest -q tests/test_index_manager.py
+python -m pytest -q tests/test_retrieval_engine.py
+```
+
+Các lệnh trên kiểm tra riêng từng nhóm chức năng; chúng không thay thế cho việc chạy script tích hợp với PostgreSQL thực tế.
+
+**Lưu ý về minh chứng:** Chỉ ghi nhận build và search end-to-end thành công sau khi chạy script trên môi trường đã cấu hình database và lưu được kết quả thực tế. Nếu thiếu `DATABASE_URL`, lỗi môi trường cần được ghi rõ, không được coi là kết quả kiểm thử thành công.
