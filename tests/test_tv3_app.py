@@ -248,3 +248,147 @@ def test_explanation_exception_keeps_app_usable_without_credentials(app_environm
     assert not at.exception
     assert at.error or at.warning or at.info
     assert not any(secret in all_output_text(at) for secret in ("explain_user", "explain_password"))
+
+
+@pytest.mark.parametrize("connection_error, secrets", [
+    (r"Reader failed password='fake\'TAIL_SECRET' host=localhost", ("fake", "TAIL_SECRET")),
+    (r'Reader failed password="fake\"DOUBLE_TAIL" host=localhost', ("fake", "DOUBLE_TAIL")),
+    (r"Reader failed password=FIRST_PASSWORD_SECRET\ SECOND_SECRET host=localhost", ("FIRST_PASSWORD_SECRET", "SECOND_SECRET")),
+    ("Reader failed password='unfinished SECRET_SUFFIX", ("unfinished", "SECRET_SUFFIX")),
+    ("Reader failed postgresql://secret_user:FIRST_PASSWORD_SECRET@SECOND_SECRET@localhost/db", ("secret_user", "FIRST_PASSWORD_SECRET", "SECOND_SECRET")),
+    ("Reader failed postgres://localhost/db?password=QUERY_SECRET&sslmode=require", ("QUERY_SECRET",)),
+])
+def test_reader_redacts_escaped_conninfo_and_complete_postgresql_urls(app_environment, connection_error, secrets):
+    _, _, content, _ = app_environment
+    content.side_effect = RuntimeError(connection_error)
+    at = submit_query(open_page())
+    at.button(key="search_open_2").click().run()
+    assert not at.exception
+    assert any("Không đọc được tài liệu" in element.value for element in at.error)
+    assert not any(secret in all_output_text(at) for secret in secrets)
+
+
+def test_search_inputs_and_results_survive_page_navigation_without_new_search(app_environment):
+    service, _, _, _ = app_environment
+    at = submit_query(open_page(), "xe điện", 20)
+    at.button(key="nav_Thư viện").click().run()
+    assert not at.exception
+    at.button(key="nav_Tìm kiếm").click().run()
+    assert not at.exception
+    assert at.text_input(key="search_text").value == "xe điện"
+    assert at.selectbox(key="ranked_top_k").value == 20
+    assert service.search_calls == [("xe điện", 20)]
+    assert at.button(key="search_open_2")
+
+
+def test_query_history_replays_top_k_with_fresh_engine_and_deduplicates(app_environment):
+    service, _, _, _ = app_environment
+    at = submit_query(open_page(), "xe điện", 10)
+    submit_query(at, "giáo dục", 5)
+    assert at.session_state["query_history"] == [
+        {"query": "giáo dục", "top_k": 5}, {"query": "xe điện", "top_k": 10}]
+    at.button(key="query_replay_1").click().run()
+    assert not at.exception
+    assert service.search_calls[-1] == ("xe điện", 10)
+    assert at.text_input(key="search_text").value == "xe điện"
+    assert at.selectbox(key="ranked_top_k").value == 10
+    assert at.session_state["query_history"] == [
+        {"query": "xe điện", "top_k": 10}, {"query": "giáo dục", "top_k": 5}]
+    at.button(key="clear_query_history").click().run()
+    assert not at.exception
+    assert at.session_state["query_history"] == []
+    assert not [button for button in at.button if str(button.key).startswith("query_replay_")]
+
+
+def test_query_history_is_bounded_skips_blank_and_can_retry_oov(app_environment):
+    at = submit_query(open_page(), "   ")
+    assert at.session_state["query_history"] == []
+    submit_query(at, "ngoaituvung")
+    assert at.session_state["query_history"][0]["query"] == "ngoaituvung"
+    at.session_state["query_history"] = [{"query": f"topic {i}", "top_k": 5} for i in range(12)]
+    submit_query(at, "xe điện")
+    assert len(at.session_state["query_history"]) == 12
+    assert at.session_state["query_history"][0]["query"] == "xe điện"
+
+
+def test_csv_download_and_search_stats_are_only_available_for_current_fresh_results(app_environment):
+    service, _, _, _ = app_environment
+    at = submit_query(open_page(), top_k=10)
+    assert len(at.get("download_button")) == 1
+    assert [(item.label, item.value) for item in at.metric] == [
+        ("Kết quả trả về", "2 / 10"), ("Thời gian truy vấn", at.metric[1].value),
+        ("Cosine cao nhất", "0.812345")]
+    assert float(at.metric[1].value.removesuffix(" ms")) >= 0
+    service.state.update(index_version="another-version")
+    at.run()
+    assert not at.exception
+    assert not at.get("download_button")
+    assert not at.metric
+
+
+def test_ranked_cards_show_safe_content_excerpt_and_actual_metadata(app_environment):
+    at = submit_query(open_page())
+    text = rendered_text(at)
+    assert "năng lượng giao thông xanh" in text
+    assert 'class="sd-doc sd-result sd-result-lead"' in text
+    assert "Công nghệ" in text
+    assert "Hạng 1 · Cosine 0.812345" in text
+
+
+def test_reader_rechecks_ready_document_after_external_delete_even_with_cached_content(app_environment, monkeypatch):
+    import smartdoc.ingestion
+
+    _, _, content, _ = app_environment
+    at = open_page("Thư viện")
+    at.button(key="list_open_2").click().run()
+    assert not at.exception
+    content.assert_called_once_with(2)
+    assert at.get("download_button")
+    live_metadata = Mock(return_value=[])
+    monkeypatch.setattr(smartdoc.ingestion, "get_documents_by_ids", live_metadata)
+    at.button(key="list_open_2").click().run()
+    assert not at.exception
+    live_metadata.assert_called_once_with([2])
+    content.assert_called_once_with(2)
+    assert any("không còn sẵn sàng" in item.value for item in at.warning)
+    assert "Xe điện dùng năng lượng sạch" not in rendered_text(at)
+    assert not at.get("download_button")
+    # Restoring a ready document triggers a fresh text fetch because deletion
+    # invalidated precisely this ID's cached content.
+    monkeypatch.setattr(smartdoc.ingestion, "get_documents_by_ids", Mock(return_value=[DOCUMENTS[0]]))
+    at.button(key="list_open_2").click().run()
+    assert not at.exception
+    assert content.call_count == 2
+
+
+@pytest.mark.parametrize("metadata", [
+    [{"document_id": 10}], [{"document_id": 2}, {"document_id": 2}],
+    [{"document_id": "2"}], None,
+])
+def test_reader_refuses_missing_ambiguous_or_wrong_ready_metadata(app_environment, monkeypatch, metadata):
+    import smartdoc.ingestion
+
+    _, _, content, _ = app_environment
+    at = open_page("Thư viện")
+    monkeypatch.setattr(smartdoc.ingestion, "get_documents_by_ids", Mock(return_value=metadata))
+    at.button(key="list_open_2").click().run()
+    assert not at.exception
+    assert at.warning
+    content.assert_not_called()
+    assert not at.get("download_button")
+
+
+def test_reader_ready_existence_check_failure_is_redacted_and_never_reads_cached_text(app_environment, monkeypatch):
+    import smartdoc.ingestion
+
+    _, _, content, _ = app_environment
+    at = open_page("Thư viện")
+    monkeypatch.setattr(smartdoc.ingestion, "get_documents_by_ids", Mock(side_effect=RuntimeError(
+        "postgresql://READY_CHECK_USER:READY_CHECK_SECRET@127.0.0.1/db password='READY_CONNINFO_SECRET'")))
+    at.button(key="list_open_2").click().run()
+    assert not at.exception
+    assert any("Không đọc được tài liệu" in item.value for item in at.error)
+    assert not any(secret in all_output_text(at) for secret in (
+        "READY_CHECK_USER", "READY_CHECK_SECRET", "READY_CONNINFO_SECRET"))
+    content.assert_not_called()
+    assert not at.get("download_button")

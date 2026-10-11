@@ -2,6 +2,8 @@
 
 Mục tiêu: trình bày dữ liệu thật → chỉ mục → query → ranking → reader/giải thích, cùng cách tái lập đánh giá. Kịch bản dự kiến 7–10 phút; thời lượng là kế hoạch trình bày, không phải số đo hiệu năng.
 
+Đây là hướng dẫn thao tác, chưa phải báo cáo hoặc slide cuối. Sau khi gán nhãn và chạy thực nghiệm, dùng [danh sách còn lại](tv3_remaining.md) để chọn bằng chứng thật cho bản trình bày sau.
+
 ## Chuẩn bị
 
 1. Mở Docker Desktop, chờ engine chạy. CMD tại root repo: kích hoạt `.venv`, chạy `docker compose up -d --wait` và `python -m scripts.check_db`.
@@ -22,7 +24,7 @@ Mục tiêu: trình bày dữ liệu thật → chỉ mục → query → rankin
 | 1 phút | Query rỗng/OOV, trạng thái index | OOV là hạn chế từ vựng; freshness phải kiểm tra |
 | 1–2 phút | CSV đánh giá/checklist | P@5 luôn chia 5; MRR@20; retrieval time tách build |
 
-Có thể thêm Thư viện/Đã lưu nếu còn thời gian. Nêu favorites/history chỉ trong phiên, chưa có hệ thống tài khoản.
+Có thể thêm Thư viện/Đã lưu nếu còn thời gian. Ở Tìm kiếm, chọn lại một query lịch sử để chứng minh engine tìm lại trên phiên bản hiện tại; tải CSV để xem rank/score/query/version, không gọi CSV đó là kết quả đánh giá. Chuyển sang trang khác rồi trở lại để thấy query/Top-K giữ trong cùng phiên. Nêu favorites/history chỉ trong phiên của tab, chưa có hệ thống tài khoản và không giữ sau restart server.
 
 ## Demo upload trên môi trường thử
 
@@ -44,6 +46,10 @@ python -m scripts.prepare_evaluation --snapshot reports/tv2_news_corpus.json --o
 ```
 
 Mặc định script tạo pool gồm hợp Top-20 thật và seed ID theo tiêu đề, sắp ID và bỏ score/rank khỏi phiếu. Bộ hiện tại có 25 query draft và 500 cặp nhãn trống. Người gán đọc nội dung độc lập với điểm tìm kiếm; người duyệt rà soát query/protocol và quyết định nhãn. Duyệt ≥20 query, điền `label_a/assessor_a`, `relevant`, ngày giờ và evidence cho nhãn dương, rồi approve theo [hướng dẫn](../evaluation/README.md). Có thể chọn `--assessor-count 2` để gán đôi/phân xử bất đồng hoặc `--exhaustive` để gán toàn corpus. Prepare từ chối ghi đè; `--force` đặt lại toàn bộ nhãn.
+
+Khi cần sửa query/information need hoặc loại query, lưu một bản CSV riêng và thêm `--queries path/to/queries.csv` vào prepare với thư mục đầu ra mới. Hash ngữ nghĩa query ngăn dùng nhãn cũ cho câu hỏi đã đổi; không sửa tay hash để vượt kiểm tra. Mỗi kit mới cần nhãn mới phù hợp và được duyệt lại.
+
+Công cụ nhập nhãn riêng: `python -m streamlit run app/review.py --server.address 127.0.0.1 --server.port 8503`. Người thật đọc raw_text, chọn 0/1, ghi bằng chứng và lưu; query/protocol được duyệt ở các tab tương ứng. Không gian này không hiển thị score/rank; nút kiểm tra độ đầy đủ không thay CLI tính metric. Trong demo chỉ trình bày nhãn đã được người đọc xác nhận; nếu mở kit nháp, nói rõ chưa có metric.
 
 ```bat
 python -m scripts.evaluate_retrieval --source snapshot --snapshot reports/tv2_news_corpus.json --evaluation-dir reports/tv3_labeling --rebuild --repeats 5

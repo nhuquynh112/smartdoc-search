@@ -9,7 +9,7 @@ from pathlib import Path
 
 from evaluation import (
     JUDGMENT_FIELDS, QUERY_FIELDS, MIN_QUERIES, MRR_DEPTH, EvaluationInputError,
-    corpus_manifest, read_csv, write_csv,
+    corpus_manifest, query_semantic_sha256, read_csv, write_csv,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -112,6 +112,7 @@ def prepare(snapshot, output, *, storage_root=None, queries=None, source="", for
     qids = [row.get("query_id") for row in queries]
     if not all(qids) or len(qids) != len(set(qids)):
         raise EvaluationInputError("Query drafts need unique nonempty query_id values.")
+    semantic_hashes = {row["query_id"]: query_semantic_sha256(row) for row in queries}
     if assessor_count not in {1, 2}:
         raise EvaluationInputError("assessor_count must be 1 or 2.")
     pools = (top20_pool(snapshot, queries) if pool_top20 else
@@ -140,12 +141,13 @@ def prepare(snapshot, output, *, storage_root=None, queries=None, source="", for
         ),
         "pool_document_ids": pools if pool_top20 else None,
         "pool_provenance": "real RetrievalEngine/IndexManager on frozen export; retrieval selects candidates only, never relevance labels" if pool_top20 else None,
+        "query_label_binding": "Every judgment carries query_semantic_sha256 over exact query_id/query/information_need. Semantic edits require a new blank kit and fresh human assessment.",
     }
     for name, payload in (("corpus_manifest.json", manifest), ("protocol.json", protocol)):
         (output / name).write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     write_csv(output / "evaluation_queries.csv", QUERY_FIELDS, queries)
     empty_judgments = ({**dict.fromkeys(JUDGMENT_FIELDS, ""), "query_id": qid,
-                        "document_id": doc_id}
+                        "query_semantic_sha256": semantic_hashes[qid], "document_id": doc_id}
                        for qid in qids for doc_id in pools[qid])
     write_csv(output / "relevance_judgments.csv", JUDGMENT_FIELDS, empty_judgments)
     write_csv(output / "judging_documents.csv", ("document_id", "title", "source_uri", "category", "text_kind", "text"), (

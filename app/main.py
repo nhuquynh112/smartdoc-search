@@ -25,6 +25,7 @@ import pandas as pd
 import streamlit as st
 
 from app.catalog_utils import categories, category_label, filter_catalog, page_slice
+from app.result_utils import ranked_results_csv
 from app.ui_theme import apply_theme
 from app.search_service import SearchService
 from app.upload_service import process_uploads
@@ -54,6 +55,7 @@ for key, default in (
     ("favorites", []), ("reading_history", []),
     ("catalog_page", 1), ("catalog_filters", None),
     ("search_text", ""), ("search_topic", "Tất cả"),
+    ("ranked_top_k", 5), ("query_history", []),
     ("home_query", ""), ("library_query", ""),
     ("reading_view", "Danh sách"),
 ):
@@ -104,8 +106,14 @@ def clear_document_cache() -> None:
 
 def safe_error(exc: object) -> str:
     # Connection exceptions can contain a DSN; never reveal credentials in UI.
-    message = re.sub(r"(postgres(?:ql)?://)[^\s@]+@", r"\1***@", str(exc))
-    return re.sub(r"(?i)(password\s*=\s*)(?:'[^']*'|\"[^\"]*\"|\S+)", r"\1***", message)
+    # Hide the complete URL, including query-string passwords and raw '@'
+    # characters in malformed userinfo, rather than guessing its boundaries.
+    message = re.sub(r"(?i)\bpostgres(?:ql)?://\S+", "postgresql://***", str(exc))
+    # libpq conninfo accepts backslash-escaped quotes and spaces. Match an
+    # escaped character as a unit so a quote inside a password cannot expose
+    # its suffix. Also redact an unfinished quoted value through end-of-text.
+    password = r"(?i)(\bpassword\s*=\s*)(?:'(?:\\.|[^'\\])*(?:'|$)|\"(?:\\.|[^\"\\])*(?:\"|$)|(?:\\.|[^\s])+)"
+    return re.sub(password, r"\1***", message)
 
 
 def go(page: str) -> None:
@@ -117,6 +125,34 @@ def go_search(query: str = "") -> None:
     st.session_state["search_text"] = query
     st.session_state["run_quick_search"] = bool(query.strip())
     go("Tìm kiếm")
+
+
+def replay_query(query: str, top_k: int) -> None:
+    """Callbacks run before form widgets, so restored values appear immediately."""
+    st.session_state["search_text"] = query
+    st.session_state["ranked_top_k"] = top_k
+    st.session_state["run_quick_search"] = True
+
+
+def remember_query(query: str, top_k: int) -> None:
+    entry = {"query": query.strip(), "top_k": top_k}
+    history = [item for item in st.session_state["query_history"] if item != entry]
+    st.session_state["query_history"] = [entry, *history][:12]
+
+
+def query_history() -> None:
+    history = st.session_state["query_history"]
+    if not history:
+        return
+    with st.expander(f"Tìm kiếm gần đây ({len(history)})", icon=":material/history:"):
+        st.caption("Lưu trong phiên trình duyệt. Chọn truy vấn để tìm lại trên chỉ mục hiện tại.")
+        with st.container(horizontal=True, gap="small"):
+            for i, item in enumerate(history):
+                st.button(f"{item['query']} · Top-{item['top_k']}", key=f"query_replay_{i}",
+                          icon=":material/search:", on_click=replay_query,
+                          args=(item["query"], item["top_k"]))
+        st.button("Xóa lịch sử tìm kiếm", key="clear_query_history", icon=":material/delete:",
+                  on_click=lambda: st.session_state.update(query_history=[]))
 
 
 def saved(doc_id: int) -> bool:
@@ -177,21 +213,40 @@ def metrics(docs: list[dict], revision: int) -> None:
             metric(label, value, glyph, note, color)
 
 
-def snippet(doc: dict) -> str:
+def snippet(doc: dict, query: str = "") -> str:
     """Safe visual excerpt; never fetch raw document text to populate a card."""
     raw = str(doc.get("clean_text") or "").replace("_", " ").strip()
-    if len(raw) > 150:
-        raw = raw[:150].rsplit(" ", 1)[0] + "…"
+    start = 0
+    if query.strip():
+        words = [word for word in re.findall(r"\w+", query.casefold()) if len(word) > 1]
+        offsets = [raw.casefold().find(word) for word in words if word in raw.casefold()]
+        if offsets:
+            start = max(0, min(offsets) - 55)
+            if start:
+                # Do not begin an excerpt in the middle of a word.
+                boundary = raw.find(" ", start, start + 25)
+                start = boundary + 1 if boundary >= 0 else start
+    raw = raw[start:]
+    if len(raw) > 220:
+        raw = raw[:220].rsplit(" ", 1)[0] + "…"
+    if start:
+        raw = "…" + raw
     return raw or "Mở để xem nội dung của tài liệu này."
 
 
-def doc_html(doc: dict, *, compact: bool = False) -> str:
+def doc_html(doc: dict, *, compact: bool = False, ranked_query: str | None = None) -> str:
     doc_id = int(doc["document_id"])
     stars = "★ Đã lưu" if saved(doc_id) else f"#{doc_id}"
-    klass = "sd-doc sd-grid-doc" if compact else "sd-doc"
-    excerpt = f'<div class="sd-micro">{esc(snippet(doc))}</div>' if compact else ""
+    ranked = ranked_query is not None
+    klass = "sd-doc sd-result" if ranked else "sd-doc sd-grid-doc" if compact else "sd-doc"
+    if ranked and int(doc["rank"]) == 1:
+        klass += " sd-result-lead"
+    ranking = (f'<div class="sd-result-ranking"><span class="sd-rank">Hạng {int(doc["rank"])} · '
+               f'Cosine {float(doc["score"]):.6f}</span>'
+               f'<span class="sd-micro">{"Phù hợp nhất trong kết quả" if int(doc["rank"]) == 1 else "Theo độ liên quan"}</span></div>') if ranked else ""
+    excerpt = f'<div class="sd-excerpt">{esc(snippet(doc, ranked_query or ""))}</div>' if compact or ranked else ""
     return (
-        f'<div class="{klass}"><div class="sd-doc-meta">'
+        f'<div class="{klass}">{ranking}<div class="sd-doc-meta">'
         f'<span class="sd-tag">{esc(stars)}</span>'
         f'<span class="sd-tag">{esc(category_label(doc))}</span>'
         f'<span>{int(doc.get("word_count") or 0):,} từ</span></div>'
@@ -220,6 +275,21 @@ def highlight_content(text: str, phrase: str) -> tuple[str, int]:
 @st.dialog("Không gian đọc tài liệu", width="large")
 def reader(doc: dict) -> None:
     doc_id = int(doc["document_id"])
+    # Library metadata and raw text may be cached, but a deleted/non-ready
+    # document must not be reopened through either cached path.
+    try:
+        current = get_documents_by_ids([doc_id])
+    except Exception as exc:
+        st.error(f"Không đọc được tài liệu: {safe_error(exc)}")
+        return
+    if (not isinstance(current, list) or len(current) != 1
+            or not isinstance(current[0], dict)
+            or type(current[0].get("document_id")) is not int
+            or current[0]["document_id"] != doc_id):
+        cached_content.clear(doc_id)
+        st.warning("Tài liệu không còn sẵn sàng trong thư viện. Hãy làm mới thư viện rồi chọn tài liệu khác.")
+        return
+    doc = {**doc, **current[0]}
     st.subheader(str(doc.get("title") or "Tài liệu chưa có tiêu đề"))
     st.caption(f"#{doc_id} · {category_label(doc)} · {int(doc.get('word_count') or 0):,} từ")
     a, b = st.columns([1, 1])
@@ -260,9 +330,24 @@ def open_reader(doc: dict) -> None:
     reader(doc)
 
 
-def document_item(doc: dict, context: str, *, grid_mode: bool = False) -> None:
+def document_item(doc: dict, context: str, *, grid_mode: bool = False,
+                  ranked_query: str | None = None) -> None:
     doc_id = int(doc["document_id"])
-    st.markdown(doc_html(doc, compact=grid_mode), unsafe_allow_html=True)
+    st.markdown(doc_html(doc, compact=grid_mode, ranked_query=ranked_query), unsafe_allow_html=True)
+    if ranked_query is not None:
+        with st.container(horizontal=True, gap="small"):
+            if st.button("Đọc tài liệu", key=f"{context}_open_{doc_id}", icon=":material/article:"):
+                open_reader(doc)
+            st.button("Đã lưu" if saved(doc_id) else "Lưu tài liệu", key=f"{context}_star_{doc_id}",
+                      icon=":material/bookmark:" if saved(doc_id) else ":material/bookmark_add:",
+                      help="Bỏ yêu thích" if saved(doc_id) else "Thêm yêu thích",
+                      on_click=toggle_saved, args=(doc_id,))
+            source = str(doc.get("source_uri") or "")
+            if source.startswith(("https://", "http://")):
+                st.link_button("Nguồn tài liệu", source, icon=":material/open_in_new:")
+            else:
+                st.caption("Nguồn: tài liệu tải lên hoặc chưa có đường dẫn xác thực.")
+        return
     left, right = st.columns([2, 1], gap="small")
     with left:
         if st.button("↗ Đọc tài liệu", key=f"{context}_open_{doc_id}", width="stretch"):
@@ -355,8 +440,12 @@ def index_controls(context: str) -> dict:
         state = service.status()
     status = state["status"]
     if status == "ok":
-        st.caption(f"Chỉ mục sẵn sàng · {state.get('document_count', 0)} tài liệu · "
-                   f"revision {state.get('corpus_revision')} · {state.get('index_version')}")
+        st.badge(f"Sẵn sàng tìm kiếm · {state.get('document_count', 0)} tài liệu",
+                 color="green", icon=":material/check_circle:")
+        with st.expander("Thông tin chỉ mục", icon=":material/database:"):
+            st.caption(f"Phiên bản dữ liệu: {state.get('corpus_revision')}")
+            st.code(str(state.get("index_version") or ""), language="text")
+            st.caption("Chỉ mục được kiểm tra với dữ liệu hiện tại trước khi hiển thị kết quả.")
     elif status == "empty_corpus":
         st.info("Thư viện chưa có tài liệu để tìm kiếm. Hãy tải lên TXT hoặc PDF có văn bản.")
     else:
@@ -364,7 +453,8 @@ def index_controls(context: str) -> dict:
                    else "Chưa có chỉ mục hợp lệ hoặc chưa kết nối được dữ liệu.")
         with st.expander("Chi tiết trạng thái"):
             st.code(safe_error(state.get("message", status)), language="text")
-    if st.button("Xây lại chỉ mục", key=f"rebuild_{context}", width="stretch"):
+    if st.button("Xây lại chỉ mục", key=f"rebuild_{context}", icon=":material/refresh:",
+                 help="Cập nhật khả năng tìm kiếm sau khi thêm hoặc thay đổi tài liệu.", width="stretch"):
         with st.spinner("Đang xây và kiểm tra chỉ mục mới..."):
             result = service.rebuild()
         clear_document_cache()
@@ -382,11 +472,15 @@ def index_controls(context: str) -> dict:
 
 def search_page() -> None:
     title("TRUNG TÂM KHÁM PHÁ", "Tìm đúng điều bạn cần.",
-          "Xếp hạng tài liệu theo TF-IDF và cosine, sử dụng chỉ mục đảo để chọn ứng viên.")
+          "Khám phá tài liệu tiếng Việt theo độ liên quan, mở đọc và lưu những nội dung hữu ích.")
     with st.form("ranked_search_form", border=False):
-        q = st.text_input("Từ khóa", placeholder="Ví dụ: xe điện, trí tuệ nhân tạo...", key="search_text")
-        top_k = st.selectbox("Số kết quả Top-K", [5, 10, 20], key="ranked_top_k")
-        submitted = st.form_submit_button("Tìm kiếm", type="primary", width="stretch")
+        inputs, limit = st.columns([4, 1], vertical_alignment="bottom")
+        with inputs:
+            q = st.text_input("Bạn muốn tìm hiểu điều gì?", placeholder="Ví dụ: xe điện, trí tuệ nhân tạo...",
+                              key="search_text", icon=":material/search:", persist_state="session")
+        with limit:
+            top_k = st.selectbox("Số kết quả Top-K", [5, 10, 20], key="ranked_top_k", persist_state="session")
+        submitted = st.form_submit_button("Tìm kiếm", icon=":material/search:", type="primary", width="stretch")
     state = index_controls("search")
     quick_search = st.session_state.pop("run_quick_search", False)
     if submitted or quick_search:
@@ -400,6 +494,9 @@ def search_page() -> None:
             "query": q, "top_k": top_k, "response": response,
             "latency_ms": (perf_counter() - started) * 1000,
         }
+        if q.strip() and response["status"] in {"ok", "oov_query"}:
+            remember_query(q, top_k)
+    query_history()
     recorded = st.session_state.get("ranked_search")
     if not recorded:
         st.info("Nhập truy vấn và nhấn Tìm kiếm. Thư viện vẫn hỗ trợ lọc tiêu đề không dấu.")
@@ -424,19 +521,27 @@ def search_page() -> None:
         return
     found = response["results"]
     section(f"{len(found)} kết quả cho “{recorded['query']}”")
-    st.caption(f"Top-{recorded['top_k']} · cosine giảm dần, hòa điểm theo mã tăng dần · "
-               f"{recorded['latency_ms']:.1f} ms cho API tìm kiếm và metadata, gồm kiểm tra PostgreSQL")
+    with st.container(horizontal=True, gap="small"):
+        st.caption(f"Top-{recorded['top_k']} · cosine giảm dần, hòa điểm theo mã tăng dần")
     if not found:
         st.info("Không có tài liệu nào có điểm dương cho truy vấn này.")
         return
+    stats = st.columns(3)
+    with stats[0]:
+        st.metric("Kết quả trả về", f"{len(found)} / {recorded['top_k']}", border=True)
+    with stats[1]:
+        st.metric("Thời gian truy vấn", f"{recorded['latency_ms']:.1f} ms", border=True,
+                  help="Một lần gọi API tìm kiếm và metadata, gồm kiểm tra PostgreSQL; không phải số đo benchmark.")
+    with stats[2]:
+        st.metric("Cosine cao nhất", f"{float(found[0]['score']):.6f}", border=True,
+                  help="Độ tương đồng TF-IDF của kết quả đầu tiên; không phải xác suất hay phần trăm chính xác.")
+    with st.container(horizontal=True, horizontal_alignment="right"):
+        st.download_button("Tải kết quả CSV", ranked_results_csv(recorded),
+                           file_name="smartdoc_search_results.csv", mime="text/csv; charset=utf-8",
+                           key="search_download_csv", icon=":material/download:", on_click="ignore",
+                           help="Bao gồm truy vấn, Top-K, phiên bản chỉ mục, thứ hạng, nguồn và điểm cosine.")
     for doc in found:
-        st.markdown(f"**Hạng {doc['rank']} · Cosine {doc['score']:.6f}**")
-        document_item(doc, "search")
-        source = str(doc.get("source_uri") or "")
-        if source.startswith(("https://", "http://")):
-            st.link_button("Nguồn tài liệu", source)
-        else:
-            st.caption("Nguồn: tài liệu tải lên hoặc chưa có đường dẫn xác thực.")
+        document_item(doc, "search", ranked_query=recorded["query"])
     if st.toggle("Minh họa cách xếp hạng", key="show_explanation"):
         chosen = st.selectbox("Tài liệu cần giải thích", [int(d["document_id"]) for d in found],
                               format_func=lambda doc_id: next(str(d.get("title", doc_id)) for d in found

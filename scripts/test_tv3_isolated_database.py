@@ -51,7 +51,7 @@ def main():
                                              cwd=PROJECT_ROOT, env=env, capture_output=True, text=True)
                 if initialized.returncode:
                     raise RuntimeError("Could not initialize the disposable test schema.")
-                targets = [] if args.all_tests else [
+                targets = ["tests"] if args.all_tests else [
                     "tests/test_ingestion_integration.py", "tests/test_recovery.py", "tests/test_tv3_upload_database.py"]
                 result = subprocess.run([
                     sys.executable, "-m", "pytest", "-q", "--tb=short", *targets,

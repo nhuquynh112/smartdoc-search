@@ -7,6 +7,7 @@ writers, so a second uncached check also rejects changes during an operation.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+import os
 from pathlib import Path
 from threading import RLock
 from typing import Any
@@ -61,7 +62,8 @@ class SearchService:
         self.metadata_loader = metadata_loader or _metadata_loader
         self.preprocessing_fn = preprocessing_fn
         self.mutation_lock = _OPERATIONS_LOCK
-        self.index_root = Path(index_root).resolve() if index_root is not None else DEFAULT_INDEX_ROOT
+        configured_root = index_root if index_root is not None else os.getenv("SMARTDOC_INDEX_ROOT")
+        self.index_root = Path(configured_root).resolve() if configured_root else DEFAULT_INDEX_ROOT
         self.index_manager = IndexManager(self.index_root, snapshot_loader=self.snapshot_loader)
 
     def _inspect(self) -> tuple[dict[str, Any], ManagedIndex | None, list[dict]]:

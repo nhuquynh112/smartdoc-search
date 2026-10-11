@@ -8,8 +8,10 @@ def apply_theme(dark: bool) -> None:
     palette = (
         {"bg":"#080c17", "side":"#0c1425", "surface":"#121d32", "surface2":"#172741", "text":"#f1f5ff", "muted":"#a0b0ca", "subtle":"#7386a8", "border":"#293b58", "input":"#14233b", "glow":"rgba(63,91,235,.12)", "shadow":"0 18px 50px rgba(0,0,0,.20)", "contrast":"#101c30"}
         if dark else
-        {"bg":"#f5f7fc", "side":"#ffffff", "surface":"#ffffff", "surface2":"#eef2fa", "text":"#17233d", "muted":"#5f718e", "subtle":"#8796b1", "border":"#dce3f1", "input":"#f7f9fd", "glow":"rgba(63,91,235,.065)", "shadow":"0 18px 48px rgba(37,61,108,.075)", "contrast":"#f3f6ff"}
+        {"bg":"#f5f7fc", "side":"#ffffff", "surface":"#ffffff", "surface2":"#eef2fa", "text":"#17233d", "muted":"#5f718e", "subtle":"#657794", "border":"#dce3f1", "input":"#f7f9fd", "glow":"rgba(63,91,235,.065)", "shadow":"0 18px 48px rgba(37,61,108,.075)", "contrast":"#f3f6ff"}
     )
+    palette["success"] = "#8ce9ab" if dark else "#0c6634"
+    palette["success-bg"] = "#103526" if dark else "#dcfce7"
     variables = ";".join(f"--sd-{name}:{value}" for name, value in palette.items())
     st.markdown("<style>:root{" + variables + "}</style>", unsafe_allow_html=True)
     st.markdown("""
@@ -45,6 +47,12 @@ def apply_theme(dark: bool) -> None:
  border-radius:13px !important;min-height:42px;transition:transform .18s ease,border-color .18s ease;}
 .stButton > button[kind="secondary"] p{color:var(--sd-text) !important;}
 .stButton > button[kind="secondary"]:hover{transform:translateY(-1px);border-color:#5884df !important;}
+button:focus-visible,a:focus-visible,input:focus-visible,[role="combobox"]:focus-visible{
+ outline:3px solid #669aff !important;outline-offset:3px !important;}
+[data-testid="stMetric"]{background:var(--sd-surface);border-color:var(--sd-border) !important;
+ border-radius:16px;box-shadow:var(--sd-shadow);}
+[data-testid="stMetricValue"]{font-variant-numeric:tabular-nums;letter-spacing:-.7px;}
+.stMarkdownBadge{color:var(--sd-success) !important;background-color:var(--sd-success-bg) !important;}
 hr{border-color:var(--sd-border) !important;}
 /* Sidebar */
 .sd-brand{display:flex;align-items:center;gap:12px;margin:8px 0 23px;}
@@ -127,7 +135,16 @@ hr{border-color:var(--sd-border) !important;}
  padding:16px 18px;box-shadow:var(--sd-shadow);transition:border-color .2s,transform .2s;margin:3px 0 8px;}
 .sd-doc:hover{border-color:#5f8bf1;transform:translateY(-2px);}
 .sd-doc-title{font-size:15px;font-weight:830;line-height:1.5;color:var(--sd-text);margin:9px 0 8px;}
+.sd-doc-title{overflow-wrap:anywhere;}
 .sd-doc-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;color:var(--sd-muted);font-size:11px;line-height:1.6;}
+.sd-result{padding:20px 23px;border-radius:20px;margin-top:10px;}
+.sd-result-lead{border-color:#5865ca;background:linear-gradient(112deg,var(--sd-surface),var(--sd-contrast));}
+.sd-result-ranking{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+ padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--sd-border);}
+.sd-rank{display:inline-flex;align-items:center;border-radius:8px;padding:5px 9px;
+ background:var(--sd-surface2);font-size:11px;color:var(--sd-text);font-weight:800;font-variant-numeric:tabular-nums;}
+.sd-result-lead .sd-rank{background:#574be9;color:#fff;}
+.sd-excerpt{font-size:12px;color:var(--sd-muted);line-height:1.8;margin-top:8px;overflow-wrap:anywhere;}
 .sd-tag{padding:3px 9px;border:1px solid var(--sd-border);background:var(--sd-surface2);
  border-radius:99px;color:var(--sd-muted);font-size:10px;font-weight:770;}
 .sd-grid-doc{min-height:130px;}
@@ -145,6 +162,12 @@ hr{border-color:var(--sd-border) !important;}
  .sd-hero h1{font-size:clamp(29px,6vw,44px);letter-spacing:-1.3px;}
  .sd-orb{display:none;}
  .sd-stat{min-height:120px;padding:16px;}
+}
+@media (max-width:640px){
+ .sd-result{padding:16px;}
+ .sd-result-ranking{align-items:flex-start;gap:6px;}
+ .sd-title{font-size:30px;}
+ .sd-doc-meta{gap:6px;}
 }
 @media (prefers-reduced-motion:reduce){*,*:before,*:after{animation:none !important;transition:none !important;}}
 </style>

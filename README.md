@@ -6,7 +6,7 @@ SmartDoc Search is an academic project for the **Multimedia Database Systems** c
 
 The project is built around a concrete question: **given a Vietnamese query, which documents should appear first, and what evidence explains their ranking?** Its focus is a traceable path from source documents to searchable features, with retrieval results that can be checked against mathematical examples and human relevance judgments.
 
-**Development stage:** TV1 data pipeline implemented; retrieval and application integration in progress. PostgreSQL schema initialization and host-side Python connectivity are implemented and verified on Ubuntu. TXT/PDF loading and shared Vietnamese preprocessing are implemented and tested. Basic end-to-end ingestion, automatic metadata, local storage and the indexing snapshot contract are implemented. The retrieval engine and user interface are pending implementation. All capabilities and acceptance criteria below describe the intended system unless explicitly marked complete.
+**Development stage on `Dat`:** the PostgreSQL data pipeline, shared Vietnamese preprocessing, TF-IDF/inverted-index retrieval and Streamlit application are integrated. Search, content reading, index freshness/rebuild, upload validation and ranking explanations have automated and live-database evidence. The local corpus checked on 10–11 October 2026 contains 200 ready documents at revision 235; cloning this repository does not copy that private database. The evaluation kit contains 25 draft queries and 500 blank pooled judgments. **Human relevance labels, Precision@5/MRR@20 results and final team acceptance are still pending.** See [the TV3 acceptance record](docs/tv3_acceptance.md) and [remaining delivery steps](docs/tv3_remaining.md).
 
 ## Contents
 
@@ -28,9 +28,9 @@ The project is built around a concrete question: **given a Vietnamese query, whi
 
 ## Project Goals
 
-The implementation will address the four core requirements of the assignment:
+The implementation addresses the four core requirements of the assignment:
 
-| Requirement | Intended Implementation | Verification |
+| Requirement | Implementation | Verification |
 | --- | --- | --- |
 | Text preprocessing | Shared Vietnamese normalization and tokenization for documents and queries | Documented before-and-after examples and edge-case tests |
 | TF-IDF representation | A fitted vocabulary and weighted sparse document matrix | A small hand-calculated example checked against the configured library |
@@ -41,9 +41,9 @@ The supporting work adds an inverted feature index, automatic metadata generatio
 
 ## Scope and User Experience
 
-The initial corpus target is **100–200 valid Vietnamese documents**. The evaluation target is **20–30 queries with human relevance labels**. These are delivery targets, not completed dataset counts.
+The assignment targets **100–200 valid Vietnamese documents** and **20–30 queries with human relevance labels**. The local demo database has 200 ready news documents; the committed evaluation queries remain drafts and their labels are blank. Database text and original files are transferred separately from source code.
 
-The planned application will let a user:
+The Streamlit application lets a user:
 
 1. Upload a TXT file or a PDF with an extractable text layer.
 2. Review automatically generated metadata and the ingestion outcome.
@@ -51,7 +51,7 @@ The planned application will let a user:
 4. Inspect document titles, ranks, similarity scores, sources, and document content.
 5. Examine selected preprocessing outputs, index postings, and term contributions to a result's score.
 
-Image-only PDFs will receive an explicit unsupported-input message in the initial release. OCR is outside the baseline scope.
+Image-only PDFs cannot become ready documents without extractable text. OCR is outside the baseline scope.
 
 ## System Architecture
 
@@ -111,9 +111,9 @@ A storage adapter isolates access to document files. The instructor's note about
 
 ### Vietnamese Preprocessing
 
-Documents and queries will use the same preprocessing configuration: Unicode normalization, lowercase conversion, whitespace and punctuation handling, Vietnamese word segmentation, and configurable stopword removal. Vietnamese diacritics and segmented multiword tokens must be preserved consistently.
+Documents and queries use shared Unicode normalization, lowercase conversion, whitespace/punctuation handling and Vietnamese word segmentation. Vietnamese diacritics and underscore-joined compound tokens are preserved. Stopword removal is configurable and disabled in the current default pipeline.
 
-Tokenizer selection, stopword sources, and configuration changes will be documented before the evaluation corpus is frozen.
+Per-document preprocessing manifests and corpus fingerprints record the frozen configuration. Evaluation must use a matching installed pipeline; changing preprocessing requires reprocessing, rebuilding and reviewing a new experiment.
 
 ### TF-IDF and the Vector Space Model
 
@@ -127,7 +127,7 @@ vector(d)    = weight(d) / ||weight(d)||₂
 
 Here, `N` is the number of indexed documents and `df(t)` is the number containing term `t`. The final library settings and the hand-calculated example must use the same conventions.
 
-Queries will be transformed using the fitted corpus vectorizer. They will not be fitted independently or added to the corpus during search.
+Queries are transformed using the fitted corpus vectorizer. They are not fitted independently or added to the corpus during search.
 
 ### Candidate Selection and Ranking
 
@@ -137,13 +137,13 @@ The inverted index maps each vocabulary term to document IDs containing that fea
 cosine(q, d) = (q · d) / (||q||₂ × ||d||₂)
 ```
 
-For L2-normalized nonzero vectors, cosine similarity equals the dot product. The engine will rank positive-score results by descending score, then ascending document ID for ties. Fewer than `K` results may be returned when fewer documents have positive scores.
+For L2-normalized nonzero vectors, cosine similarity equals the dot product. The engine ranks positive-score results by descending score, then ascending document ID for ties. Fewer than `K` results may be returned when fewer documents have positive scores.
 
-Empty queries, queries with no known vocabulary terms, and an empty corpus will have explicit outcomes. A similarity score measures lexical overlap under this representation; it is not a probability that a document is relevant.
+Empty queries, queries with no known vocabulary terms, and an empty corpus have explicit outcomes. A similarity score measures lexical overlap under this representation; it is not a probability that a document is relevant.
 
 ### Ranking Explanations
 
-For normalized vectors, each shared term contributes `q[t] × d[t]` to the score. Showing the largest contributions will make a selected result explainable and provide a useful demonstration of the underlying model.
+For normalized vectors, each shared term contributes `q[t] × d[t]` to the score. The application displays query tokens, posting lists/candidates, normalized weights and per-term contributions for a selected result.
 
 ## Data and Storage Design
 
@@ -191,7 +191,7 @@ The baseline demo will serialize corpus mutations and index rebuilds. PostgreSQL
 
 ## Module Contracts
 
-The TV1 data-service functions below are implemented. The TV2 search interface remains a planned contract.
+The data-service and retrieval interfaces below are implemented. UI integration calls these services rather than writing SQL or fitting a separate model.
 
 ### Data to Retrieval
 
@@ -211,9 +211,21 @@ The TV1 data-service functions below are implemented. The TV2 search interface r
 
 ### Retrieval to Application
 
-`search_query(query, top_k)` will return ranked records containing `document_id`, `score`, and `rank`. Validation and index-availability outcomes will be defined explicitly during implementation.
+`smartdoc.retrieval_engine.search_query(query, top_k=5)` returns a response dictionary:
 
-The application will resolve document metadata and content through data-service functions. UI code will not own SQL queries, preprocessing logic, or index construction.
+```python
+{
+    "status": "ok",
+    "message": "...",
+    "results": [{"document_id": 42, "score": 0.856, "rank": 1}],
+    "index_version": "...",
+    "corpus_revision": 235,
+}
+```
+
+The public engine accepts integer `top_k` from 1 to 20; the UI offers 5/10/20. Outcomes include `ok`, `empty_query`, `oov_query`, `empty_corpus`, `index_unavailable` and `stale_index`. Invalid argument types/ranges raise `InvalidRetrievalInputError`.
+
+`app.search_service.SearchService` exposes `status()`, `search()`, `rebuild()` and `explain()`. It enriches hits with metadata by stable ID and checks freshness before/after retrieval. Rebuild returns `rebuilt`; a failed build is reported as `rebuild_failed`, and results from an incompatible version are hidden. Content comes from `smartdoc.ingestion.get_document_text()` and PostgreSQL `raw_text`. The UI does not own SQL queries or a separate preprocessing/indexing implementation.
 
 ## Repository Structure
 
@@ -232,7 +244,8 @@ smartdoc-search/
 ├── storage/
 │   ├── originals/          # Local source files
 │   └── processed/          # Local processed text
-├── artifacts/              # Generated index artifacts
+├── data/tv2_index/          # Generated UI retrieval index (ignored)
+├── evaluation/             # Frozen manifest, draft queries and blank judgments
 ├── reports/                # Generated data-quality and evaluation results
 ├── tests/                  # Unit and integration tests
 │   └── __init__.py
@@ -243,9 +256,9 @@ Empty directories are retained with `.gitkeep`. Local uploads, processed text, g
 
 ## Technology Choices
 
-| Component | Selected or Planned Technology | Purpose |
+| Component | Technology | Purpose |
 | --- | --- | --- |
-| Language | Python; target environment 3.11 or 3.12 | Data pipeline and retrieval services |
+| Language | Python 3.12 for the tested integrated environment | Data pipeline and retrieval services |
 | Metadata database | PostgreSQL | Persistent document management |
 | Database adapter | Psycopg 3 | Parameterized database access |
 | Retrieval | scikit-learn and sparse matrices | TF-IDF and numerical scoring |
@@ -254,13 +267,13 @@ Empty directories are retained with `.gitkeep`. Local uploads, processed text, g
 | Vietnamese segmentation | Underthesea | Shared document and query features |
 | Collaboration | Git and GitHub | Version control and review |
 
-Dependency versions will be pinned after compatibility testing. PostgreSQL metadata indexes and the retrieval inverted index serve different purposes; the latter is the feature index used for search.
+`requirements_tv3.txt` includes shared dependencies and pins the tested application/numerical stack. PostgreSQL metadata indexes and the retrieval inverted index serve different purposes; the latter is the feature index used for search.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Git and Python 3.11 or 3.12.
+- Git and Python 3.12 for the tested application dependency set.
 - Ubuntu: Docker Engine with the Compose plugin, or Docker Desktop.
 - Windows: Docker Desktop running Linux containers.
 
@@ -269,7 +282,7 @@ Docker runs PostgreSQL; Python and the application run on the host. Each contrib
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/nhuquynh112/smartdoc-search.git
+git clone --branch Dat https://github.com/nhuquynh112/smartdoc-search.git
 cd smartdoc-search
 ```
 
@@ -287,7 +300,7 @@ Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
-Open `.env` locally and replace both `CHANGE_ME` placeholders with the same password. For the initial setup, use letters and digits to avoid URI escaping. The database connection for host Python uses `localhost:5433`. Keep `.env` out of version control.
+Open `.env` locally and replace both `CHANGE_ME` placeholders with the same password. For the initial setup, use letters and digits to avoid URI escaping. Host Python connects to port 5433. On Windows with the Docker IPv4 binding, use `127.0.0.1` as the `DATABASE_URL` host if `localhost` incurs an IPv6 timeout. Keep `.env` out of version control.
 
 ### 3. Start PostgreSQL
 
@@ -320,7 +333,7 @@ The defaults are database `smartdoc` and role `smartdoc_app`. This container-loc
 Ubuntu:
 
 ```bash
-python3 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 python --version
 ```
@@ -328,7 +341,7 @@ python --version
 Windows PowerShell:
 
 ```powershell
-py -3 -m venv .venv
+py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python --version
 ```
@@ -346,19 +359,25 @@ The named volume retains database contents after `down`. Adding `-v` deletes the
 
 ### Verified Setup Status
 
-Ubuntu setup has been demonstrated with Python **3.12.3**, a PostgreSQL **16.15** container reporting healthy, and a container-local query returning `smartdoc` / `smartdoc_app`. Host-side Python authentication and schema initialization have also passed on Ubuntu. Windows execution remains to be verified.
+Ubuntu setup has been demonstrated with Python **3.12.3**, PostgreSQL **16.15**, host-side authentication and schema initialization. The integrated app has also been verified on Windows with Python **3.12.6**, PostgreSQL **16**, Streamlit **1.65.0** and 200 ready documents. On 11 October, a fresh virtual environment installed `requirements_tv3.txt`, passed `pip check` and passed the final **236 tests plus 38 subtests in 65.80 seconds** on a disposable database; demo count/revision remained unchanged. This verifies the tested dependency/schema path; it does not mean a clean clone includes the private corpus or certify every restore scenario on another machine.
 
-### 6. Install Database Dependencies and Initialize the Schema
+### 6. Install Dependencies and Choose a Data Setup
 
 With the virtual environment active:
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install -r requirements_tv3.txt
+```
+
+For a new empty development dataset, initialize the schema and import the included small fixture:
+
+```bash
 python -m scripts.init_db
+python -m scripts.ingest_documents data/samples
 python -m scripts.check_db
 ```
 
-A fresh database should report:
+Immediately after schema initialization, before importing documents, a fresh database should report:
 
 ```text
 Database schema initialized successfully.
@@ -366,7 +385,9 @@ Connected to database: smartdoc
 Corpus revision: 0; ready documents: 0
 ```
 
-The schema contains `documents` and `corpus_state`. Initialization creates the base schema and applies SQL files from `database/migrations/` in filename order. Current migrations are additive and idempotent, so rerunning preserves existing records. This is a simple migration runner without a migration-history table; future migration files must remain safe to rerun. Commands must be run from the repository root. Current dependencies cover database access, document extraction and Vietnamese segmentation. Additional dependencies will be added as their modules are implemented.
+To receive the team's 200-document corpus, obtain the private dump and matching manifest, then follow [the database transfer guide](docs/database_transfer.md). **Do not initialize the schema before restore:** restore requires an empty schema. An existing populated database should be retained; use a separate empty database for a restore test. The Git repository does not contain the dump or original corpus files.
+
+The schema contains `documents` and `corpus_state`. Initialization creates the base schema and applies SQL files from `database/migrations/` in filename order. Current migrations are additive and idempotent, so rerunning preserves existing records. This is a simple migration runner without a migration-history table; future migration files must remain safe to rerun. Commands must be run from the repository root.
 
 ### Preview Document Processing
 
@@ -385,9 +406,13 @@ python -m scripts.report_data_quality
 
 This read-only command writes `reports/data_quality_report.csv` and `reports/data_quality_summary.json`, including document states, word counts, missing database sources and storage integrity checks. Generated reports are excluded from Git. Duplicate upload attempts are not persisted, so their count is reported as unavailable rather than zero. These checks do not certify PDF reading order or linguistic quality; review extracted text manually. Source entries in `data/sources.csv` are not automatically imported into database metadata.
 
-### Remaining Runtime Setup
+### Run the Application
 
-Index-building, evaluation, and application entry points remain pending. Cloning the repository does not copy another contributor's local database.
+```bash
+python -m streamlit run app/main.py
+```
+
+Open the URL printed by Streamlit. On the search page, use **Xây lại chỉ mục** when no index exists or the corpus has changed. The application reads the whole ready library and stores its generated index in ignored `data/tv2_index/`. A stale revision/fingerprint/version cannot serve ranked results. See [the application guide](docs/tv3_ui_pro_v2.md) for the complete workflow.
 
 ### Import Documents
 
@@ -408,15 +433,15 @@ Run text-pipeline tests:
 python -m unittest tests.test_text_pipeline -v
 ```
 
-Run the explicit integration test against the configured development database:
+Run mutation tests through the disposable-database runner:
 
 ```bash
-python -m unittest tests.test_ingestion_integration -v
+python -m scripts.test_tv3_isolated_database
 ```
 
-The integration test creates and removes temporary records; corpus revision advances during the test. It must not be run against a production database.
+It requires the configured PostgreSQL role to have `CREATEDB`, creates a unique test database and temporary storage, then removes only the database it created. It verifies that the demo ready count/revision are unchanged. Direct ingestion/recovery tests create/delete records and advance revision, so do not point them at the frozen demo/evaluation database.
 
-Ingestion serializes operations through a PostgreSQL advisory lock. Individual filesystem writes are atomic, but database and filesystem storage are not one transaction. A process crash or database commit failure may leave orphan files; reconciliation and broader recovery tests remain follow-up work. Segmentation now respects basic sentence punctuation/newlines before tokenization; linguistic accuracy still requires corpus review.
+Ingestion serializes operations through a PostgreSQL advisory lock. Individual filesystem writes are atomic, but database and filesystem storage are not one transaction. Recovery tests and [storage reconciliation](docs/recovery.md) cover known failure paths; a crash may still leave orphan files requiring audit. Segmentation respects basic sentence punctuation/newlines before tokenization; linguistic accuracy still requires corpus review.
 
 ### Export Data for TV2
 
@@ -430,7 +455,7 @@ This writes `reports/tv2_corpus.json` with ready document text, stable IDs, corp
 
 ### Evaluation Collection
 
-The experiment will use a fixed corpus, documented queries, and human-assigned relevance judgments. Labels will be assigned independently of cosine scores and reviewed when annotators disagree.
+The experiment uses a fixed corpus, documented queries, and human-assigned relevance judgments. The committed kit currently has 25 draft queries and 500 blank Top-20-plus-seed judgments. Labels must be assigned from content independently of cosine scores/ranks, then reviewed. See [the labeling procedure](evaluation/README.md); no real relevance score is available before this work is complete.
 
 Queries will cover individual terms, multiword information needs, Vietnamese compounds, ambiguous terms, and lexical limitations such as synonyms. Queries with no relevant documents in the corpus will be reported separately as behavioral checks.
 
@@ -439,25 +464,19 @@ Queries will cover individual terms, multiword information needs, Vietnamese com
 | Measure | Convention |
 | --- | --- |
 | Precision@5 | Relevant documents in the first five positions divided by five; missing positions count as nonrelevant |
-| MRR | Mean reciprocal rank of the first relevant result; zero when no relevant result is retrieved |
+| MRR@20 | Mean reciprocal rank of the first relevant result in the first 20; zero when none is retrieved |
 | Query latency | Measured after loading the index, with the timed steps and environment specified |
 | Index build time | Reported separately from query latency |
 
-The MRR evaluation depth must be fixed before experiments; truncated evaluation will be labeled `MRR@K`. Reports will include per-query results, aggregate metrics, corpus size, preprocessing configuration, and representative failure cases. No benchmark scores are claimed at the scaffold stage.
+The protocol fixes the depth at **MRR@20**. Reports include per-query results, aggregate metrics, corpus size, preprocessing configuration and timing samples. The CLI refuses draft/incomplete labels, corpus changes and unmatched preprocessing. Every actual Top-20 result must have a human label; unjudged documents never silently count as nonrelevant. Pooled judgments do not establish full-corpus recall. No Precision@5/MRR@20 benchmark scores are claimed yet.
+
+Timing can be measured independently with `python -m scripts.benchmark_tv3_latency --source database --corpus vietonline_news_200 --rebuild --repeats 5 --warmups 1`. It uses a separate frozen-input index, records API and preloaded-core samples, and excludes build/load/warmup from query samples. A draft timing workload is explicitly marked provisional and never produces relevance metrics. API timing excludes the UI, result metadata and document content; the application stopwatch has a broader scope. See [the application guide](docs/tv3_ui_pro_v2.md) before comparing these measurements.
 
 If time permits, a controlled comparison will evaluate whitespace tokenization against Vietnamese word segmentation while keeping the corpus, queries, labels, and other settings fixed.
 
 ### Acceptance Criteria
 
-- [ ] At least 100 valid documents with recorded provenance where available.
-- [ ] All four assignment requirements are implemented and demonstrated.
-- [ ] A hand-calculated TF-IDF and cosine example matches the program within a documented tolerance.
-- [ ] Inverted-index retrieval agrees with full-corpus scoring for positive-score results.
-- [ ] Stable document IDs and consistent artifact versions survive additions, deletions, and restarts.
-- [ ] Invalid files, duplicates, empty queries, unknown terms, and rebuild failures have clear outcomes.
-- [ ] At least 20 labeled queries support documented Precision@5 and MRR results.
-- [ ] Setup and execution are reproducible from a clean environment.
-- [ ] The final demonstration, report, and slides agree with the implemented system.
+The assignment requires at least 100 valid documents, correct preprocessing/TF-IDF/cosine/ranking, a checked hand-calculated example, real inverted-index use, safe index lifecycle, clear error outcomes, at least 20 labeled queries with metrics, reproducible setup and a coherent final demonstration. [The acceptance record](docs/tv3_acceptance.md) distinguishes code, fixture tests, real PostgreSQL checks and observed browser actions. [The remaining steps](docs/tv3_remaining.md) identify work that still needs human decisions/evidence; passing code tests alone does not complete team acceptance.
 
 ## Team Responsibilities
 
@@ -471,13 +490,13 @@ All members contribute to integration, document their own modules, and prepare t
 
 ## Development Workflow
 
-The default branch contains shared foundations and reviewed changes. Contributors develop their modules on feature branches and submit pull requests before merging.
+The default branch contains shared foundations and reviewed changes. This integrated application handoff is on **`Dat`**; use that branch to reproduce the TV3 version. Keep this handoff's pushes on `Dat`. Other workstreams retain their own branches and review process.
 
 | Workstream | Suggested Branch |
 | --- | --- |
 | Data and storage | `feat/data` |
 | Retrieval engine | `feat/search-engine` |
-| Application and evaluation | `feat/app-evaluation` |
+| Application and evaluation in this handoff | `Dat` |
 
 Keep commits focused on a coherent change. Pull requests should describe the resulting behavior, the verification performed, and any unresolved integration dependency. Before committing, inspect the changed files and check formatting:
 
@@ -559,30 +578,22 @@ Run the TV2 retrieval-focused test suites from the repository root with the proj
 python -m pytest -q tests/test_tfidf_engine.py tests/test_inverted_index.py tests/test_search_engine.py tests/test_index_manager.py tests/test_retrieval_engine.py
 ```
 
-The complete suite below creates/deletes records and can increment the configured database's corpus revision. Use a separate disposable test database, never the frozen evaluation/demo database.
-
-Run the complete test suite against that test database with:
+The full suite includes database-backed ingestion, recovery and upload tests that create/delete records. Run it through the guarded disposable-database runner, with Docker/PostgreSQL healthy and a configured role that can create a database:
 
 ```powershell
-python -m pytest
+python -m scripts.test_tv3_isolated_database --all-tests
 ```
 
-The full suite includes database-backed ingestion and recovery tests. These tests require a valid local `DATABASE_URL` and a running PostgreSQL instance. If PostgreSQL is not configured, those tests may fail before exercising their intended behavior.
-
-To run the full suite while excluding the three database-dependent tests currently identified in the local environment:
-
-```powershell
-python -m pytest -q -k "not test_ready_duplicate_failed_and_delete and not test_quarantine_preserves_files and not test_storage_failure_retry_keeps_id"
-```
-
-This exclusion is for local verification only; it does not replace database integration testing.
+The runner creates separate PostgreSQL/storage state and checks the demo before/after. Do not run the full suite directly against the frozen evaluation/demo database. Read-only live search/explanation checks can be repeated with `python -m scripts.verify_tv3 --rebuild --repeats 5`; `--rebuild` writes only local index artifacts. Diagnostic timing in this smoke check does not replace the labeled-query experiment.
 
 The retrieval-focused tests verify TF-IDF behavior, inverted-index retrieval, ranking, index management, and the public retrieval API. A passing test suite does not replace the hand-calculated TF-IDF/cosine example or the labeled-query evaluation required for final acceptance.
 
 ### Streamlit Application and Evaluation (Dat)
 
-Install `requirements_tv3.txt`, start PostgreSQL, then run `python -m streamlit run app/main.py` from the repository root. The application uses the real TF-IDF retrieval service with Top-5/10/20, rank, cosine score, sources, a content reader and keyword-contribution explanations. Use **Xây lại chỉ mục** after a corpus change; mismatched revision/fingerprint/index versions cannot serve search results. Search checks PostgreSQL without using the library's 600-second display cache.
+Install `requirements_tv3.txt`, start PostgreSQL, then run `python -m streamlit run app/main.py` from the repository root. The application uses the real TF-IDF retrieval service with Top-5/10/20, rank, cosine score, sources, a content reader and keyword-contribution explanations. Search supports session query/Top-K persistence, a 12-item replayable query history and UTF-8 CSV export with index/revision provenance. These session conveniences do not add accounts or durable personal history. Use **Xây lại chỉ mục** after a corpus change; mismatched revision/fingerprint/index versions cannot serve search results. Search checks PostgreSQL without using the library's 600-second display cache.
 
 On Windows with Docker bound to `127.0.0.1:5433`, use `127.0.0.1` as the local `DATABASE_URL` host if `localhost` incurs an IPv6 connection timeout; keep credentials in the ignored `.env` file.
 
 See [application setup](docs/tv3_ui_pro_v2.md), [acceptance evidence](docs/tv3_acceptance.md), [evaluation and independent relevance labeling](evaluation/README.md), [member report](docs/tv3_report.md) and [demo script](docs/tv3_demo.md). The committed query/label kit is a draft. Precision@5 and MRR@20 remain pending human review and actual labels.
+
+For human labeling, run `python -m streamlit run app/review.py --server.address 127.0.0.1 --server.port 8503`. This separate local workspace reads original PostgreSQL text and writes explicit human decisions to the evaluation kit; it does not show retrieval scores/ranks or infer relevance. Review queries/protocol and validate coverage before running the metric CLI. Changing query meaning requires a new prepared kit with blank labels; never edit hashes to reuse labels for a different information need. The final report/slides will be consolidated after this work, at the user's request.

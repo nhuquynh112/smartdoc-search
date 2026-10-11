@@ -569,5 +569,6 @@
       216
     ]
   },
-  "pool_provenance": "real RetrievalEngine/IndexManager on frozen export; retrieval selects candidates only, never relevance labels"
+  "pool_provenance": "real RetrievalEngine/IndexManager on frozen export; retrieval selects candidates only, never relevance labels",
+  "query_label_binding": "Every judgment carries query_semantic_sha256 over exact query_id/query/information_need. Semantic edits require a new blank kit and fresh human assessment."
 }

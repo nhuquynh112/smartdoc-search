@@ -19,7 +19,7 @@ QUERY_FIELDS = (
     "provenance", "author", "review_status", "reviewed_by", "reviewed_at",
 )
 JUDGMENT_FIELDS = (
-    "query_id", "document_id", "label_a", "assessor_a", "label_b", "assessor_b",
+    "query_id", "query_semantic_sha256", "document_id", "label_a", "assessor_a", "label_b", "assessor_b",
     "relevant", "adjudicator", "resolution", "evidence", "labeled_at",
 )
 
@@ -41,6 +41,14 @@ def canonical_sha256(value) -> str:
     encoded = json.dumps(value, ensure_ascii=False, sort_keys=True,
                          separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def query_semantic_sha256(query) -> str:
+    """Bind a judgment to the exact question/need that the human read."""
+    fields = ("query_id", "query", "information_need")
+    for field in fields:
+        _required_text(query, field, "Query semantics")
+    return canonical_sha256({field: query[field] for field in fields})
 
 
 def _snapshot_rows(snapshot):
@@ -70,6 +78,12 @@ def _snapshot_rows(snapshot):
     fingerprint = preprocessing.get("fingerprint")
     if not isinstance(fingerprint, str) or not fingerprint:
         raise EvaluationInputError("A preprocessing fingerprint is required.")
+    for row in rows:
+        if row.get("preprocessing_version") != fingerprint:
+            raise EvaluationInputError(
+                f"Document {row['document_id']} preprocessing_version differs from the corpus fingerprint. "
+                "Export a corpus with verified, consistent preprocessing."
+            )
     return sorted(rows, key=lambda row: row["document_id"])
 
 
@@ -229,11 +243,13 @@ def validate_evaluation_inputs(snapshot, manifest, protocol, queries, judgments,
     doc_ids = {row["document_id"] for row in snapshot["documents"]}
     query_ids = set()
     query_texts = set()
+    semantic_hashes = {}
     for query in queries:
         qid = _required_text(query, "query_id", "Query")
         if qid in query_ids:
             raise EvaluationInputError(f"Duplicate query_id: {qid}.")
         query_ids.add(qid)
+        semantic_hashes[qid] = query_semantic_sha256(query)
         for field in ("query", "information_need", "provenance"):
             _required_text(query, field, qid)
         normalized = " ".join(query["query"].casefold().split())
@@ -265,6 +281,11 @@ def validate_evaluation_inputs(snapshot, manifest, protocol, queries, judgments,
         context = f"Judgment {qid}/{doc_id}"
         if qid not in query_ids or doc_id not in doc_ids:
             raise EvaluationInputError(f"{context}: unknown query or document ID.")
+        if judgment.get("query_semantic_sha256") != semantic_hashes[qid]:
+            raise EvaluationInputError(
+                f"{context}: query semantics changed or the binding hash is missing. "
+                "Prepare a new blank kit for the edited query/need and reassess; do not reuse old labels."
+            )
         if (qid, doc_id) in seen:
             raise EvaluationInputError(f"{context}: duplicate judgment.")
         seen.add((qid, doc_id))
@@ -299,7 +320,14 @@ def validate_evaluation_inputs(snapshot, manifest, protocol, queries, judgments,
         raise EvaluationInputError(f"Incomplete judgments: {len(seen)}/{required} query-document pairs.")
     empty = sorted(qid for qid, ids in relevant.items() if not ids)
     if empty:
-        raise EvaluationInputError(f"No relevant document for {', '.join(empty)}; report these as behavior tests separately.")
+        if scope == "pooled_top20":
+            raise EvaluationInputError(
+                f"No known relevant document in the judged pool for {', '.join(empty)}. "
+                "Expand independent content assessment beyond Top-20 and add positive judgments if found; "
+                "keep missed queries in the metric set with zero retrieved hits. "
+                "Only move a query to behavior tests after confirming no relevant document exists in the corpus."
+            )
+        raise EvaluationInputError(f"No relevant document in the exhaustively judged corpus for {', '.join(empty)}; report these as behavior tests separately.")
     return ValidatedJudgments(relevant, judged_ids, scope)
 
 

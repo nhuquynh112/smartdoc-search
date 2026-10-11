@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import hashlib
+from io import StringIO
 import json
 import math
 import os
@@ -15,11 +18,41 @@ from time import perf_counter
 
 from evaluation import (
     EvaluationInputError, MRR_DEPTH, canonical_sha256, latency_summary,
-    precision_at_5, reciprocal_rank_at_20, read_csv, summarize_metrics,
+    precision_at_5, reciprocal_rank_at_20, summarize_metrics,
     validate_evaluation_inputs, validate_frozen_corpus, write_csv,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def validate_report_output(path, *, protected_files=(), protected_directories=()):
+    path = Path(path)
+    if path.suffix.lower() != ".json":
+        raise EvaluationInputError("--output must end in .json; the CSV companion uses a separate .csv path.")
+    if path.resolve() == path.with_suffix(".csv").resolve():
+        raise EvaluationInputError("JSON and CSV report paths must differ.")
+    protected = {Path(value).resolve() for value in protected_files}
+    directories = [Path(value).resolve() for value in protected_directories]
+    for output in (path.resolve(), path.with_suffix(".csv").resolve()):
+        if output in protected or any(output.is_relative_to(directory) for directory in directories):
+            raise EvaluationInputError("Report output would overwrite evaluation inputs or index artifacts; choose a separate reports path.")
+    return path
+
+
+def validate_index_root(index_root, *, protected_directories=(), protected_files=()):
+    """Only build in a separate empty directory or an evaluation-owned index."""
+    from smartdoc.index_manager import ACTIVE_MANIFEST_NAME
+
+    root = Path(index_root).resolve()
+    directories = [Path(value).resolve() for value in protected_directories]
+    if root == ROOT.resolve() or any(root.is_relative_to(value) or value.is_relative_to(root)
+                                     for value in directories):
+        raise EvaluationInputError("Evaluation index must use a separate directory outside corpus, source code and labeling inputs.")
+    if any(Path(value).resolve().is_relative_to(root) for value in protected_files):
+        raise EvaluationInputError("Evaluation index directory cannot contain an input or report file.")
+    if (root / ACTIVE_MANIFEST_NAME).exists() and not (root / "evaluation_provenance.json").is_file():
+        raise EvaluationInputError("This directory already contains a different index; select a separate evaluation index directory.")
+    return root
 
 
 def validate_response(response, doc_ids):
@@ -99,10 +132,13 @@ def benchmark(engine, managed_index, queries, relevance, preprocessing_fn, *, re
         first = next((rank for rank, doc_id in enumerate(expected_ids, 1) if doc_id in relevance[qid]), None)
         per_query.append({
             "query_id": qid, "query": text, "status": response["status"],
+            "information_need": query.get("information_need", ""), "category": query.get("category", ""),
             "relevant_document_count": len(relevance[qid]), "returned_count": len(expected_ids),
             "judgment_scope": judgment_scope,
             "judged_document_count": len(judged_ids[qid]) if judged_ids is not None else len(doc_ids),
             "ranked_document_ids": expected_ids,
+            "ranked_results": [{"document_id": row["document_id"], "rank": row["rank"], "score": row["score"]}
+                               for row in response["results"]],
             "relevant_document_ids": sorted(relevance[qid]), "first_relevant_rank_at_20": first,
             "precision_at_5": precision_at_5(expected_ids, relevance[qid]),
             "reciprocal_rank_at_20": reciprocal_rank_at_20(expected_ids, relevance[qid]),
@@ -111,6 +147,13 @@ def benchmark(engine, managed_index, queries, relevance, preprocessing_fn, *, re
         })
     return {
         "summary": summarize_metrics(per_query), "per_query": per_query,
+        "failure_analysis": {
+            "no_relevant_hit_at_20": [row["query_id"] for row in per_query if row["first_relevant_rank_at_20"] is None],
+            "first_relevant_after_5": [row["query_id"] for row in per_query
+                                       if row["first_relevant_rank_at_20"] is not None and row["first_relevant_rank_at_20"] > 5],
+            "fewer_than_5_results": [row["query_id"] for row in per_query if row["returned_count"] < 5],
+            "note": "Diagnostic groups, not inferred causes. A short list alone does not prove a retrieval defect. Inspect query needs, judged content and term overlap before explaining errors.",
+        },
         "judgment_scope": judgment_scope,
         "coverage_note": ("All actual returned Top-20 IDs have human judgments. Relevance is known within the judged pool; no recall or full-corpus relevance completeness is claimed."
                           if judgment_scope == "pooled_top20" else "All query-document pairs were human judged."),
@@ -160,11 +203,24 @@ def main():
     if args.repeats < 1 or args.warmups < 1:
         parser.error("--repeats and --warmups must be >=1.")
     try:
+        protected_dirs = (args.evaluation_dir, args.storage_root, ROOT / "data", ROOT / "app",
+                          ROOT / "smartdoc", ROOT / "scripts", ROOT / "tests")
+        validate_report_output(args.output, protected_files=(args.snapshot,),
+                               protected_directories=(*protected_dirs, args.index_root))
+        validate_index_root(args.index_root, protected_directories=protected_dirs,
+                            protected_files=(args.snapshot, args.output, args.output.with_suffix(".csv")))
+    except EvaluationInputError as exc:
+        parser.error(str(exc))
+    try:
         kit = args.evaluation_dir
-        manifest = json.loads((kit / "corpus_manifest.json").read_text(encoding="utf-8"))
-        protocol = json.loads((kit / "protocol.json").read_text(encoding="utf-8"))
-        queries = read_csv(kit / "evaluation_queries.csv")
-        judgments = read_csv(kit / "relevance_judgments.csv")
+        # Parse exactly the bytes whose digest is retained for the final guard.
+        input_bytes = {name: (kit / name).read_bytes() for name in (
+            "corpus_manifest.json", "protocol.json", "evaluation_queries.csv", "relevance_judgments.csv")}
+        input_file_sha256 = {name: hashlib.sha256(value).hexdigest() for name, value in input_bytes.items()}
+        manifest = json.loads(input_bytes["corpus_manifest.json"])
+        protocol = json.loads(input_bytes["protocol.json"])
+        queries = list(csv.DictReader(StringIO(input_bytes["evaluation_queries.csv"].decode("utf-8-sig"), newline="")))
+        judgments = list(csv.DictReader(StringIO(input_bytes["relevance_judgments.csv"].decode("utf-8-sig"), newline="")))
         if args.source == "snapshot":
             def loader(_corpus_name=None):
                 return json.loads(args.snapshot.read_text(encoding="utf-8"))
@@ -174,8 +230,7 @@ def main():
         snapshot = loader(args.corpus)
         relevance = validate_evaluation_inputs(snapshot, manifest, protocol, queries, judgments,
                                               storage_root=args.storage_root)
-        # Imports/optional dependencies and index mutation occur only after
-        # human labels and frozen inputs have passed validation.
+        # Index mutation occurs only after human labels and frozen inputs pass.
         from smartdoc.index_manager import IndexManager
         from smartdoc.preprocessing import PreprocessingConfig, pipeline_manifest, preprocess_text
         from smartdoc.retrieval_engine import RetrievalEngine
@@ -230,7 +285,8 @@ def main():
             "corpus_manifest": manifest,
             "input_provenance": {"queries_sha256": canonical_sha256(queries),
                                  "judgments_sha256": canonical_sha256(judgments),
-                                 "protocol_sha256": canonical_sha256(protocol)},
+                                 "protocol_sha256": canonical_sha256(protocol),
+                                 "file_sha256": input_file_sha256},
             "protocol": protocol, "environment": environment_info(), "index_version": managed.version_id,
             "tfidf_configuration": {key: artifacts.vectorizer.get_params().get(key) for key in (
                 "norm", "use_idf", "smooth_idf", "sublinear_tf", "lowercase", "max_df", "min_df", "ngram_range",
@@ -240,6 +296,9 @@ def main():
                                    "mrr_at_20": "macro mean of 1 / first relevant rank within first 20; no hit = 0",
                                    "averaging": "one metric value per query, regardless of timing repetitions"},
         })
+        for name, expected_digest in input_file_sha256.items():
+            if hashlib.sha256((kit / name).read_bytes()).hexdigest() != expected_digest:
+                raise EvaluationInputError(f"Frozen evaluation input changed during measurement: {name}. Rerun on an unchanged approved kit.")
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(json.dumps(results, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         fields = ("query_id", "query", "status", "judgment_scope", "judged_document_count", "returned_count", "relevant_document_count",

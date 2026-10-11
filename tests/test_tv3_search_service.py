@@ -189,3 +189,9 @@ def test_new_service_can_read_persisted_index_after_restart(service):
                               preprocessing_fn=adapter.preprocessing_fn)
     assert restarted.search("alpha")["results"] == adapter.search("alpha")["results"]
     assert restarted.mutation_lock is adapter.mutation_lock
+
+
+def test_index_root_can_be_isolated_by_environment(monkeypatch, tmp_path):
+    monkeypatch.setenv("SMARTDOC_INDEX_ROOT", str(tmp_path / "configured"))
+    assert SearchService().index_root == (tmp_path / "configured").resolve()
+    assert SearchService(tmp_path / "explicit").index_root == (tmp_path / "explicit").resolve()

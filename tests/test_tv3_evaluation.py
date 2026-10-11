@@ -4,13 +4,16 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from evaluation import (
     EvaluationInputError, ValidatedJudgments, corpus_manifest, latency_summary, precision_at_5,
+    query_semantic_sha256,
     reciprocal_rank_at_20, summarize_metrics, validate_evaluation_inputs,
     validate_frozen_corpus,
+    JUDGMENT_FIELDS, QUERY_FIELDS, write_csv,
 )
-from scripts.evaluate_retrieval import benchmark, validate_response
+from scripts.evaluate_retrieval import benchmark, main, validate_index_root, validate_report_output, validate_response
 from scripts.prepare_evaluation import prepare
 
 
@@ -57,6 +60,8 @@ class SyntheticAuditTests(unittest.TestCase):
                  "source_uri": "synthetic://unit-test/b", "dataset_id": "test-b"},
             ],
         }
+        for document in self.snapshot["documents"]:
+            document["preprocessing_version"] = self.snapshot["preprocessing"]["fingerprint"]
         self.manifest = corpus_manifest(self.snapshot)
         self.protocol = {
             "status": "approved", "labeling_method": "human_content_review",
@@ -76,7 +81,7 @@ class SyntheticAuditTests(unittest.TestCase):
             "seed_document_ids": "1",
         } for i in range(1, 21)]
         self.judgments = [{
-            "query_id": query["query_id"], "document_id": str(doc_id),
+            "query_id": query["query_id"], "query_semantic_sha256": query_semantic_sha256(query), "document_id": str(doc_id),
             "label_a": "1" if doc_id == 1 else "0", "label_b": "1" if doc_id == 1 else "0",
             "relevant": "1" if doc_id == 1 else "0", "assessor_a": "Synthetic assessor A",
             "assessor_b": "Synthetic assessor B", "evidence": "SYNTHETIC TEST FIXTURE ONLY",
@@ -96,6 +101,8 @@ class SyntheticAuditTests(unittest.TestCase):
         changed["documents"][0]["clean_text"] = "another tokenizer variant"
         changed["corpus_revision"] += 1
         changed["preprocessing"]["fingerprint"] = "variant"
+        for document in changed["documents"]:
+            document["preprocessing_version"] = "variant"
         actual = corpus_manifest(changed)
         self.assertEqual(actual["corpus_identity_sha256"], self.manifest["corpus_identity_sha256"])
         self.assertNotEqual(actual["retrieval_input_sha256"], self.manifest["retrieval_input_sha256"])
@@ -143,7 +150,8 @@ class SyntheticAuditTests(unittest.TestCase):
             self.validate()
         query = {**self.queries[0], "query_id": "Q21", "query": "new synthetic query 21"}
         self.queries.append(query)
-        self.judgments.extend([{**row, "query_id": "Q21"} for row in self.judgments[:2]])
+        self.judgments.extend([{**row, "query_id": "Q21", "query_semantic_sha256": query_semantic_sha256(query)}
+                               for row in self.judgments[:2]])
         self.assertEqual(len(self.validate()), 21)
 
     def test_single_assessor_pool_is_valid_and_negative_notes_optional(self):
@@ -211,6 +219,32 @@ class SyntheticAuditTests(unittest.TestCase):
         with self.assertRaisesRegex(EvaluationInputError, "behavior tests"):
             self.validate()
 
+    def test_negative_pool_requires_more_assessment_not_dropping_query(self):
+        self.protocol["judgment_scope"] = "pooled_top20"
+        for row in self.judgments[:2]:
+            row.update(label_a="0", label_b="0", relevant="0")
+        with self.assertRaisesRegex(EvaluationInputError, "Expand independent content assessment beyond Top-20"):
+            self.validate()
+
+    def test_changed_query_or_need_cannot_reuse_labels(self):
+        original = copy.deepcopy(self.queries[0])
+        for field in ("query", "information_need"):
+            self.queries[0] = {**original, field: original[field] + " changed meaning"}
+            with self.subTest(field=field), self.assertRaisesRegex(EvaluationInputError, "query semantics changed"):
+                self.validate()
+
+    def test_missing_semantic_hash_rejects_legacy_judgments(self):
+        self.judgments[0].pop("query_semantic_sha256")
+        with self.assertRaisesRegex(EvaluationInputError, "binding hash is missing"):
+            self.validate()
+
+    def test_document_pipeline_must_match_snapshot_fingerprint(self):
+        self.snapshot["documents"][0]["preprocessing_version"] = "different-pipeline"
+        with self.assertRaisesRegex(EvaluationInputError, "preprocessing_version differs"):
+            corpus_manifest(self.snapshot)
+        with self.assertRaisesRegex(EvaluationInputError, "preprocessing_version differs"):
+            self.validate()
+
     def test_seed_ids_and_review_timestamps_are_checked(self):
         self.queries[0]["seed_document_ids"] = "999"
         with self.assertRaisesRegex(EvaluationInputError, "unknown seed"):
@@ -240,6 +274,8 @@ class SyntheticAuditTests(unittest.TestCase):
             protocol = json.loads((Path(directory) / "protocol.json").read_text(encoding="utf-8"))
             self.assertTrue(all(query["review_status"] == "draft" for query in queries))
             self.assertTrue(all(not row["label_a"] and not row["label_b"] and not row["relevant"] for row in judgments))
+            hashes = {query["query_id"]: query_semantic_sha256(query) for query in queries}
+            self.assertTrue(all(row["query_semantic_sha256"] == hashes[row["query_id"]] for row in judgments))
             self.assertEqual(len(judgments), 40)
             self.assertEqual(protocol["status"], "draft")
             with self.assertRaisesRegex(EvaluationInputError, "overwritten"):
@@ -247,6 +283,19 @@ class SyntheticAuditTests(unittest.TestCase):
 
 
 class RealEngineSyntheticSmokeTests(unittest.TestCase):
+    def test_json_output_and_csv_companion_must_be_distinct(self):
+        for output in ("reports/custom.csv", "reports/custom.txt", "reports/custom"):
+            with self.subTest(output=output), self.assertRaisesRegex(EvaluationInputError, "must end in .json"):
+                validate_report_output(output)
+        self.assertEqual(validate_report_output("reports/custom.json"), Path("reports/custom.json"))
+
+    def test_report_cannot_replace_kit_snapshot_or_index_files(self):
+        for output in ("evaluation/protocol.json", "evaluation/evaluation_queries.json", "reports/index/active.json"):
+            with self.subTest(output=output), self.assertRaisesRegex(EvaluationInputError, "overwrite evaluation inputs"):
+                validate_report_output(output, protected_directories=("evaluation", "reports/index"))
+        with self.assertRaisesRegex(EvaluationInputError, "overwrite evaluation inputs"):
+            validate_report_output("reports/corpus.json", protected_files=("reports/corpus.json",))
+
     def test_public_api_benchmark_uses_real_engine_on_synthetic_documents(self):
         from smartdoc.index_manager import IndexManager
         from smartdoc.retrieval_engine import RetrievalEngine
@@ -273,6 +322,11 @@ class RealEngineSyntheticSmokeTests(unittest.TestCase):
             with self.assertRaisesRegex(EvaluationInputError, "unjudged document IDs"):
                 benchmark(engine, managed, [{"query_id": "SYNTHETIC", "query": "alpha gamma"}],
                           pooled, str.lower, repeats=1, warmups=1)
+            missed = ValidatedJudgments({"SYNTHETIC": {12}}, {"SYNTHETIC": {7, 12}}, "pooled_top20")
+            result = benchmark(engine, managed, [{"query_id": "SYNTHETIC", "query": "alpha"}],
+                               missed, str.lower, repeats=1, warmups=1)
+            self.assertEqual(result["summary"]["precision_at_5"], 0)
+            self.assertEqual(result["summary"]["mrr_at_20"], 0)
 
     def test_failed_service_or_invalid_ranking_cannot_be_scored(self):
         with self.assertRaises(EvaluationInputError):
@@ -285,6 +339,120 @@ class RealEngineSyntheticSmokeTests(unittest.TestCase):
         ):
             with self.subTest(rows=rows), self.assertRaises(EvaluationInputError):
                 validate_response({"status": "ok", "results": rows}, {7, 12})
+
+
+class EvaluationCliIndexSafetyTests(unittest.TestCase):
+    """Approved SYNTHETIC fixtures exercise real persistence, never real labels."""
+
+    def make_kit(self, root):
+        from smartdoc.preprocessing import PreprocessingConfig, pipeline_manifest
+
+        fixture = SyntheticAuditTests()
+        fixture.setUp()
+        preprocessing = pipeline_manifest(PreprocessingConfig(
+            segment_words=False, remove_stopwords=False, stopwords=frozenset()))
+        snapshot = copy.deepcopy(fixture.snapshot)
+        snapshot["preprocessing"] = preprocessing
+        for doc in snapshot["documents"]:
+            doc["preprocessing_version"] = preprocessing["fingerprint"]
+        kit = root / "kit"
+        kit.mkdir()
+        snapshot_path = root / "snapshot.json"
+        protocol = copy.deepcopy(fixture.protocol)
+
+        def write_inputs():
+            manifest = corpus_manifest(snapshot)
+            protocol.update(corpus_identity_sha256=manifest["corpus_identity_sha256"],
+                            retrieval_input_sha256=manifest["retrieval_input_sha256"])
+            snapshot_path.write_text(json.dumps(snapshot), encoding="utf-8")
+            (kit / "corpus_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+            (kit / "protocol.json").write_text(json.dumps(protocol), encoding="utf-8")
+            write_csv(kit / "evaluation_queries.csv", QUERY_FIELDS, fixture.queries)
+            write_csv(kit / "relevance_judgments.csv", JUDGMENT_FIELDS, fixture.judgments)
+            # Prove any CLI refusal below is not due to an incomplete/draft kit.
+            validate_evaluation_inputs(snapshot, manifest, protocol, fixture.queries, fixture.judgments)
+            return manifest
+
+        write_inputs()
+        output = root / "evaluation_result.json"
+        argv = ["evaluate_retrieval", "--snapshot", str(snapshot_path), "--evaluation-dir", str(kit),
+                "--storage-root", str(root / "storage"), "--index-root", str(root / "evaluation_index"),
+                "--output", str(output), "--repeats", "1", "--warmups", "1", "--rebuild"]
+        return snapshot, argv, output, write_inputs
+
+    def test_cli_rejects_real_foreign_index_before_any_write(self):
+        from smartdoc.index_manager import ACTIVE_MANIFEST_NAME, IndexManager
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            snapshot, argv, output, _ = self.make_kit(root)
+            foreign = root / "foreign_index"
+            manager = IndexManager(foreign, snapshot_loader=lambda _name=None: snapshot)
+            managed = manager.build_and_activate()
+            self.assertTrue((foreign / ACTIVE_MANIFEST_NAME).is_file())
+            before = {path.relative_to(foreign): path.read_bytes() for path in foreign.rglob("*") if path.is_file()}
+            argv[argv.index("--index-root") + 1] = str(foreign)
+            with patch("sys.argv", argv), self.assertRaises(SystemExit) as refused:
+                main()
+            self.assertEqual(refused.exception.code, 2)
+            after = {path.relative_to(foreign): path.read_bytes() for path in foreign.rglob("*") if path.is_file()}
+            self.assertEqual(before, after)
+            self.assertEqual(manager.load_active().version_id, managed.version_id)
+            self.assertFalse(output.exists())
+            self.assertFalse(output.with_suffix(".csv").exists())
+
+    def test_owned_evaluation_index_can_rebuild_for_new_approved_frozen_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            snapshot, argv, output, write_inputs = self.make_kit(root)
+            with patch("sys.argv", argv):
+                main()
+            previous = json.loads(output.read_text(encoding="utf-8"))
+            snapshot["corpus_revision"] += 1
+            snapshot["documents"][0]["clean_text"] += " alpha revised"
+            manifest = write_inputs()
+            with patch("sys.argv", argv):
+                main()
+            rebuilt = json.loads(output.read_text(encoding="utf-8"))
+            self.assertNotEqual(rebuilt["index_version"], previous["index_version"])
+            self.assertEqual(rebuilt["corpus_manifest"]["retrieval_input_sha256"], manifest["retrieval_input_sha256"])
+            self.assertIsNotNone(rebuilt["rebuild_ms"])
+
+    def test_index_and_report_paths_cannot_overlap_protected_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            kit = root / "kit"
+            kit.mkdir()
+            for target in (kit, kit / "nested", root):
+                with self.subTest(target=target), self.assertRaises(EvaluationInputError):
+                    validate_index_root(target, protected_directories=(kit,))
+            for name in ("snapshot.json", "report.json", "report.csv"):
+                with self.subTest(name=name), self.assertRaises(EvaluationInputError):
+                    validate_index_root(root, protected_files=(root / name,))
+
+    def test_changed_kit_file_during_benchmark_cannot_publish_or_replace_report(self):
+        import scripts.evaluate_retrieval as module
+
+        real_benchmark = module.benchmark
+        for filename in ("corpus_manifest.json", "protocol.json", "evaluation_queries.csv", "relevance_judgments.csv"):
+            with self.subTest(filename=filename), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                _, argv, output, _ = self.make_kit(root)
+                # Keep an earlier report to prove refusal does not overwrite it.
+                output.write_bytes(b"PREVIOUS_SYNTHETIC_REPORT")
+                output.with_suffix(".csv").write_bytes(b"PREVIOUS_SYNTHETIC_CSV")
+
+                def change_kit_after_benchmark(*args, **kwargs):
+                    result = real_benchmark(*args, **kwargs)
+                    target = root / "kit" / filename
+                    target.write_bytes(target.read_bytes() + b"\n")
+                    return result
+
+                with patch("sys.argv", argv), patch.object(module, "benchmark", change_kit_after_benchmark), self.assertRaises(SystemExit) as refused:
+                    main()
+                self.assertEqual(refused.exception.code, 2)
+                self.assertEqual(output.read_bytes(), b"PREVIOUS_SYNTHETIC_REPORT")
+                self.assertEqual(output.with_suffix(".csv").read_bytes(), b"PREVIOUS_SYNTHETIC_CSV")
 
 
 if __name__ == "__main__":
