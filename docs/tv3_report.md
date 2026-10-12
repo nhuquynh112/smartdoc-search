@@ -32,7 +32,7 @@ Sáu trang: Tổng quan, Tìm kiếm, Thư viện, Đã lưu, Tải lên, Phân 
 
 Tìm kiếm cho nhập query, chọn Top-K 5/10/20 và xem rank/title/score/nguồn/nội dung. Thư viện có lọc chuỗi, chủ đề, sắp xếp, phân trang để duyệt corpus; lọc chuỗi không được gọi là ranking TF-IDF.
 
-Reader lấy raw_text DB khi mở tài liệu, xem metadata/nguồn HTTP(S), tìm và tô sáng cụm chính xác, xuất TXT UTF-8. Nội dung/cụm tìm được escape trước khi tạo HTML. Yêu thích/lịch sử dùng session Streamlit, chưa lưu giữa phiên.
+Reader lấy raw_text DB khi mở tài liệu, xem metadata/nguồn HTTP(S), tìm và tô sáng cụm chính xác, xuất TXT UTF-8. Nội dung/cụm tìm được escape trước khi tạo HTML. Từ bản sửa 12/10, yêu thích được lưu PostgreSQL và dùng chung workspace local; lịch sử đọc/truy vấn vẫn theo phiên. Reader giữ tài liệu đang mở khi nút lưu rerun và không hiển thị toast từ callback dialog.
 
 Upload gọi ingestion API, hỗ trợ TXT/PDF text, tối đa 8 MiB/tệp; metadata bắt buộc tự sinh. UI báo kết quả từng tệp; duplicate không được đếm thành ready mới. Upload mang corpus `user_uploads`; thực nghiệm chọn riêng `vietonline_news_200`. Hai tên corpus vẫn dùng cùng DB/revision, nên nhãn corpus riêng không thay thế môi trường thử riêng; trong thực nghiệm phải giữ DB cố định hoặc dùng snapshot đóng băng.
 

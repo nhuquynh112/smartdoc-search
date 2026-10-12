@@ -95,7 +95,7 @@ def search(
     # Documents are already preprocessed by TV1. Query tokens must use the same
     # whitespace-tokenized representation; do not invoke Underthesea here.
     query_tokens = normalized_query.split()
-    vocabulary = set(engine.vectorizer.get_feature_names_out())
+    vocabulary = engine.vectorizer.vocabulary_
     known_query_terms = [term for term in query_tokens if term in vocabulary]
     if not known_query_terms:
         return []

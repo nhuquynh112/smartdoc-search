@@ -81,9 +81,13 @@ Cosine không phải xác suất liên quan. Tìm không dấu trong thư viện
 
 Build tạo phiên bản mới và chỉ kích hoạt sau kiểm tra. Rebuild lỗi không được coi là thành công; bộ cũ chỉ được phục vụ nếu vẫn khớp corpus hiện tại. Luồng demo sửa corpus và rebuild theo thứ tự, không bảo đảm cập nhật đồng thời từ nhiều tiến trình.
 
-Cache danh mục/nội dung dùng TTL 600 giây để giảm đọc DB khi chuyển trang. Nút làm mới và upload làm mất hiệu lực dữ liệu cache; kiểm tra freshness của tìm kiếm thuộc dịch vụ, không dựa riêng vào TTL danh mục. Nếu tiến trình khác thay dữ liệu, nhấn làm mới để cập nhật thẻ thống kê.
+Cache danh mục có TTL 600 giây và khóa theo corpus revision đọc mới từ DB, nên upload/delete/reprocess từ tiến trình khác tự làm mất hiệu lực cache ở lần rerun tiếp theo. Trang Đã lưu lấy metadata trực tiếp theo ID bookmark, không phụ thuộc danh mục cũ. Nút làm mới và upload vẫn xóa cache thủ công khi cần.
 
-Reader tra metadata hiện tại qua API không cache mỗi lần mở/rerun. Nếu ID bị xóa hoặc không còn ready, ứng dụng không mở nội dung/TXT cũ từ cache và xóa cache của ID đó. Lỗi DB cũng chặn lần đọc thay vì trình bày cache như dữ liệu còn hợp lệ. Bộ thống kê/thư viện có thể vẫn cần nút làm mới khi dữ liệu bị tiến trình khác đổi.
+Reader đọc metadata/raw_text và bookmark hiện tại mỗi lần mở/rerun; ID deleted/non-ready hoặc lỗi DB sẽ chặn đọc thay vì phục vụ text cache cũ. Dialog đang mở ở tab khác cập nhật nút lưu ở lần tương tác tiếp theo, không có push realtime. Khi có hơn 300 vị trí trùng, UI ghi rõ chỉ tô 300 vị trí đầu.
+
+SearchService cache snapshot theo revision/fingerprint và index theo active manifest cùng inode/size/mtime/ctime của artifact. Mỗi lần dùng vẫn kiểm tra revision trực tiếp từ DB; file đổi sẽ được nạp và kiểm tra checksum/số học lại. Không cache kết quả khi DB mất kết nối và vẫn kiểm tra trước/sau query để từ chối stale. Chỉ mục immutable đã kiểm tra được tái sử dụng trong bộ nhớ, giảm deserialize/validate/inverted-index rebuild lặp. Lần đầu sau restart/rebuild vẫn cần nạp/warmup.
+
+Loader giới hạn đầu vào 8 MB, PDF 200 trang và text trích xuất 2.000.000 ký tự, kiểm tra từng trang và dừng khi vượt ngưỡng. Đây chưa phải hard timeout hoặc sandbox bộ nhớ cho parser; một trang PDF phức tạp vẫn có thể xử lý chậm.
 
 ## Upload và reader
 
@@ -93,7 +97,7 @@ Reader tra metadata hiện tại qua API không cache mỗi lần mở/rerun. N�
 - `user_uploads` là nhãn corpus trong cùng DB, không phải DB thử riêng. Revision thuộc DB, nên upload vẫn có thể làm manifest đánh giá không còn khớp; trong khi gán nhãn/đo hãy giữ DB cố định hoặc dùng snapshot đã đóng băng.
 - Mỗi tệp hiển thị ready, duplicate hoặc lỗi. Duplicate không tạo tài liệu ready thứ hai.
 - Reader đọc `raw_text` từ PostgreSQL; tải TXT là xuất văn bản UTF-8, không phải tải tệp nguồn ban đầu.
-- Yêu thích, lịch sử đọc và lịch sử truy vấn chỉ lưu trong phiên Streamlit của tab hiện tại; chưa có tài khoản hoặc lưu liên phiên vào PostgreSQL. Khởi động lại server làm mất các mục phiên; index trên đĩa vẫn có vòng đời riêng.
+- Từ bản sửa 12/10, danh sách yêu thích lưu trong PostgreSQL (`saved_documents`) và giữ qua reload/restart. Đây là danh sách chung của workspace local, chưa có tài khoản riêng. Lịch sử đọc và truy vấn vẫn theo phiên. Chạy `python -m scripts.init_db` để áp dụng migration khi cập nhật máy khác; thao tác lưu/bỏ lưu không đổi corpus revision hoặc yêu cầu rebuild index.
 - Dump có văn bản/metadata nhưng không có `storage/originals`. Muốn truy xuất tệp nguồn phải nhận thư mục storage phù hợp.
 
 ## Kiểm chứng và giới hạn

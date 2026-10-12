@@ -6,7 +6,7 @@ SmartDoc Search is an academic project for the **Multimedia Database Systems** c
 
 The project is built around a concrete question: **given a Vietnamese query, which documents should appear first, and what evidence explains their ranking?** Its focus is a traceable path from source documents to searchable features, with retrieval results that can be checked against mathematical examples and human relevance judgments.
 
-**Development stage on `Dat`:** the PostgreSQL data pipeline, shared Vietnamese preprocessing, TF-IDF/inverted-index retrieval and Streamlit application are integrated. Search, content reading, index freshness/rebuild, upload validation and ranking explanations have automated and live-database evidence. The local corpus checked on 10–11 October 2026 contains 200 ready documents at revision 235; cloning this repository does not copy that private database. The evaluation kit contains 25 draft queries and 500 blank pooled judgments. **Human relevance labels, Precision@5/MRR@20 results and final team acceptance are still pending.** See [the TV3 acceptance record](docs/tv3_acceptance.md) and [remaining delivery steps](docs/tv3_remaining.md).
+**Development stage on `main`:** the PostgreSQL data pipeline, shared Vietnamese preprocessing, TF-IDF/inverted-index retrieval and Streamlit application are integrated. Search, content reading, index freshness/rebuild, upload validation and ranking explanations have automated and live-database evidence. The local corpus checked on 10–11 October 2026 contains 200 ready documents at revision 235; cloning this repository does not copy that private database. The evaluation kit contains 25 draft queries and 500 blank pooled judgments. **Human relevance labels, Precision@5/MRR@20 results and final team acceptance are still pending.** See [the TV3 acceptance record](docs/tv3_acceptance.md) and [remaining delivery steps](docs/tv3_remaining.md).
 
 ## Contents
 
@@ -282,7 +282,7 @@ Docker runs PostgreSQL; Python and the application run on the host. Each contrib
 ### 1. Clone the Repository
 
 ```bash
-git clone --branch Dat https://github.com/nhuquynh112/smartdoc-search.git
+git clone --branch main https://github.com/nhuquynh112/smartdoc-search.git
 cd smartdoc-search
 ```
 
@@ -490,7 +490,7 @@ All members contribute to integration, document their own modules, and prepare t
 
 ## Development Workflow
 
-The default branch contains shared foundations and reviewed changes. This integrated application handoff is on **`Dat`**; use that branch to reproduce the TV3 version. Keep this handoff's pushes on `Dat`. Other workstreams retain their own branches and review process.
+The **`main`** branch contains the integrated data pipeline, retrieval engine, Streamlit application and demo fixes. Use `main` to reproduce the current demo. Continue development on the workstream branches below and integrate reviewed changes into `main`.
 
 | Workstream | Suggested Branch |
 | --- | --- |
@@ -588,9 +588,9 @@ The runner creates separate PostgreSQL/storage state and checks the demo before/
 
 The retrieval-focused tests verify TF-IDF behavior, inverted-index retrieval, ranking, index management, and the public retrieval API. A passing test suite does not replace the hand-calculated TF-IDF/cosine example or the labeled-query evaluation required for final acceptance.
 
-### Streamlit Application and Evaluation (Dat)
+### Streamlit Application and Evaluation
 
-Install `requirements_tv3.txt`, start PostgreSQL, then run `python -m streamlit run app/main.py` from the repository root. The application uses the real TF-IDF retrieval service with Top-5/10/20, rank, cosine score, sources, a content reader and keyword-contribution explanations. Search supports session query/Top-K persistence, a 12-item replayable query history and UTF-8 CSV export with index/revision provenance. These session conveniences do not add accounts or durable personal history. Use **Xây lại chỉ mục** after a corpus change; mismatched revision/fingerprint/index versions cannot serve search results. Search checks PostgreSQL without using the library's 600-second display cache.
+Install `requirements_tv3.txt`, start PostgreSQL, apply migrations with `python -m scripts.init_db`, then run `python -m streamlit run app/main.py` from the repository root. The application uses the real TF-IDF retrieval service with Top-5/10/20, rank, cosine score, sources, a content reader and keyword-contribution explanations. Search supports session query/Top-K persistence, a 12-item replayable query history and UTF-8 CSV export with index/revision provenance. Bookmarks persist in PostgreSQL across browser/server restarts and are shared by the local workspace; no user accounts are implemented. Reading/query history remains session-only. Bookmark changes do not alter corpus revision. Use **Xây lại chỉ mục** after a corpus change; mismatched revision/fingerprint/index versions cannot serve search results. Search checks PostgreSQL without using the library's 600-second display cache.
 
 On Windows with Docker bound to `127.0.0.1:5433`, use `127.0.0.1` as the local `DATABASE_URL` host if `localhost` incurs an IPv6 connection timeout; keep credentials in the ignored `.env` file.
 

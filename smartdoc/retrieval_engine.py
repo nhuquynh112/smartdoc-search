@@ -316,12 +316,13 @@ class RetrievalEngine:
 
             query_vector = artifacts.vectorizer.transform([processed_query]).tocsr()
             document_vector = artifacts.matrix.getrow(row_index).tocsr()
+            feature_names = artifacts.vectorizer.get_feature_names_out()
             query_weights = {
-                str(artifacts.vectorizer.get_feature_names_out()[column]): float(weight)
+                str(feature_names[column]): float(weight)
                 for column, weight in zip(query_vector.indices, query_vector.data)
             }
             document_weights = {
-                str(artifacts.vectorizer.get_feature_names_out()[column]): float(weight)
+                str(feature_names[column]): float(weight)
                 for column, weight in zip(document_vector.indices, document_vector.data)
             }
 

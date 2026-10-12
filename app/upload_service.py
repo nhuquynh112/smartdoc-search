@@ -4,9 +4,10 @@ from __future__ import annotations
 from contextlib import nullcontext
 from pathlib import Path
 import tempfile
+from smartdoc.document_loader import MAX_DOCUMENT_BYTES
 
 
-MAX_UPLOAD_BYTES = 8 * 1024 * 1024
+MAX_UPLOAD_BYTES = MAX_DOCUMENT_BYTES
 
 
 def process_uploads(files, category, *, ingest_fn, mutation_lock=None):

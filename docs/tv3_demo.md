@@ -24,7 +24,7 @@ Mục tiêu: trình bày dữ liệu thật → chỉ mục → query → rankin
 | 1 phút | Query rỗng/OOV, trạng thái index | OOV là hạn chế từ vựng; freshness phải kiểm tra |
 | 1–2 phút | CSV đánh giá/checklist | P@5 luôn chia 5; MRR@20; retrieval time tách build |
 
-Có thể thêm Thư viện/Đã lưu nếu còn thời gian. Ở Tìm kiếm, chọn lại một query lịch sử để chứng minh engine tìm lại trên phiên bản hiện tại; tải CSV để xem rank/score/query/version, không gọi CSV đó là kết quả đánh giá. Chuyển sang trang khác rồi trở lại để thấy query/Top-K giữ trong cùng phiên. Nêu favorites/history chỉ trong phiên của tab, chưa có hệ thống tài khoản và không giữ sau restart server.
+Có thể thêm Thư viện/Đã lưu nếu còn thời gian. Ở Tìm kiếm, chọn lại một query lịch sử để chứng minh engine tìm lại trên phiên bản hiện tại; tải CSV để xem rank/score/query/version, không gọi CSV đó là kết quả đánh giá. Chuyển sang trang khác rồi trở lại để thấy query/Top-K giữ trong cùng phiên. Danh sách đã lưu giữ trong PostgreSQL qua reload/restart và dùng chung workspace local; lịch sử đọc/truy vấn chỉ theo phiên, chưa có tài khoản riêng.
 
 ## Demo upload trên môi trường thử
 

@@ -195,3 +195,35 @@ def test_index_root_can_be_isolated_by_environment(monkeypatch, tmp_path):
     monkeypatch.setenv("SMARTDOC_INDEX_ROOT", str(tmp_path / "configured"))
     assert SearchService().index_root == (tmp_path / "configured").resolve()
     assert SearchService(tmp_path / "explicit").index_root == (tmp_path / "explicit").resolve()
+
+
+def test_revision_cached_path_rejects_change_during_metadata_read(service):
+    from app.snapshot_cache import RevisionSnapshotCache
+    adapter, current = service
+    adapter.rebuild()
+    adapter.snapshot_loader = RevisionSnapshotCache(
+        adapter.snapshot_loader, lambda: current['value']['corpus_revision'], lambda: 'test-v1')
+    assert adapter.search('alpha')['status'] == 'ok'
+    original = adapter.metadata_loader
+    def changed(ids):
+        current['value']['corpus_revision'] += 1
+        return original(ids)
+    adapter.metadata_loader = changed
+    response = adapter.search('alpha')
+    assert response['status'] == 'stale_index'
+    assert response['results'] == []
+
+
+def test_revision_cached_path_rejects_database_disconnect(service):
+    from app.snapshot_cache import RevisionSnapshotCache
+    adapter, _ = service
+    adapter.rebuild()
+    cache = RevisionSnapshotCache(adapter.snapshot_loader, lambda: 7, lambda: 'test-v1')
+    adapter.snapshot_loader = cache
+    assert adapter.search('alpha')['status'] == 'ok'
+    def offline():
+        raise OSError('database offline')
+    cache.revision_loader = offline
+    response = adapter.search('alpha')
+    assert response['status'] == 'index_unavailable'
+    assert response['results'] == []

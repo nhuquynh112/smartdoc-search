@@ -12,6 +12,7 @@ the inverted index, or rank search results.
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import tempfile
 from dataclasses import dataclass
@@ -19,11 +20,21 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 import joblib
+import numpy as np
 from scipy.sparse import load_npz, save_npz
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 
-ARTIFACT_FORMAT_VERSION = 1
+ARTIFACT_FORMAT_VERSION = 2
+ARTIFACT_FILES = ("vectorizer.joblib", "tfidf_matrix.npz", "ordered_document_ids.json")
+
+
+def _file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 class TfidfEngineError(RuntimeError):
@@ -36,6 +47,43 @@ class InvalidTrainingCorpusError(TfidfEngineError):
 
 class InvalidTfidfArtifactError(TfidfEngineError):
     """Saved TF-IDF artifact is missing, incompatible or corrupt."""
+
+
+def _validate_weights(vectorizer: TfidfVectorizer, matrix) -> None:
+    """Reject weights that cannot represent the baseline L2 TF-IDF model."""
+    expected = {"tokenizer": str.split, "token_pattern": None, "preprocessor": None,
+                "lowercase": False, "norm": "l2", "use_idf": True,
+                "smooth_idf": True, "sublinear_tf": False,
+                "analyzer": "word", "ngram_range": (1, 1), "binary": False,
+                "stop_words": None}
+    if not isinstance(vectorizer, TfidfVectorizer) or any(
+        vectorizer.get_params().get(key) != value for key, value in expected.items()
+    ):
+        raise InvalidTfidfArtifactError("Vectorizer configuration differs from baseline TF-IDF.")
+    if matrix.dtype.kind != "f" or not np.isfinite(matrix.data).all() or (matrix.data < 0).any():
+        raise InvalidTfidfArtifactError("TF-IDF matrix must contain finite, nonnegative real weights.")
+    try:
+        matrix.check_format(full_check=True)
+        # sklearn may emit valid CSR rows with unsorted column indices.
+        checked = matrix.copy()
+        checked.sort_indices()
+        if not checked.has_canonical_format:
+            raise ValueError("duplicate sparse matrix entries")
+        squared_norms = np.asarray(matrix.multiply(matrix).sum(axis=1)).ravel()
+        nonempty = np.diff(matrix.indptr) > 0
+        if not np.allclose(squared_norms[nonempty], 1.0, rtol=1e-7, atol=1e-9):
+            raise ValueError("document vectors are not L2 normalized")
+        if matrix.shape[1]:
+            vocabulary = vectorizer.vocabulary_
+            indices = list(vocabulary.values())
+            if (any(isinstance(index, bool) or not isinstance(index, (int, np.integer)) for index in indices)
+                    or sorted(indices) != list(range(matrix.shape[1]))):
+                raise ValueError("vocabulary indices do not match matrix columns")
+            idf = np.asarray(vectorizer.idf_)
+            if idf.shape != (matrix.shape[1],) or not np.isfinite(idf).all() or (idf < 1).any():
+                raise ValueError("invalid smoothed IDF weights")
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise InvalidTfidfArtifactError(f"Invalid TF-IDF weights or vocabulary: {exc}") from exc
 
 
 @dataclass(frozen=True)
@@ -146,6 +194,7 @@ def save_tfidf_artifacts(artifacts: TfidfArtifacts, directory: str | Path) -> Pa
       - manifest.json
     """
     target = Path(directory)
+    _validate_weights(artifacts.vectorizer, artifacts.matrix)
     target.mkdir(parents=True, exist_ok=True)
 
     payload = {
@@ -173,6 +222,7 @@ def save_tfidf_artifacts(artifacts: TfidfArtifacts, directory: str | Path) -> Pa
                 json.dumps(list(artifacts.ordered_document_ids), ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
+            payload["sha256"] = {name: _file_sha256(tmp / name) for name in ARTIFACT_FILES}
             manifest_tmp.write_text(
                 json.dumps(payload, ensure_ascii=False, indent=2),
                 encoding="utf-8",
@@ -199,6 +249,17 @@ def load_tfidf_artifacts(directory: str | Path) -> TfidfArtifacts:
     target = Path(directory)
     try:
         manifest = json.loads((target / "manifest.json").read_text(encoding="utf-8"))
+        if not isinstance(manifest, dict) or manifest.get("format_version") not in (1, ARTIFACT_FORMAT_VERSION):
+            raise InvalidTfidfArtifactError("Unsupported or missing artifact format_version.")
+        # Check bytes before loading joblib. Checksums detect accidental corruption;
+        # these local artifacts still must come from a trusted source.
+        if manifest["format_version"] == ARTIFACT_FORMAT_VERSION:
+            checksums = manifest.get("sha256")
+            if not isinstance(checksums, dict) or set(checksums) != set(ARTIFACT_FILES):
+                raise InvalidTfidfArtifactError("Artifact checksums are missing or incomplete.")
+            for name in ARTIFACT_FILES:
+                if checksums[name] != _file_sha256(target / name):
+                    raise InvalidTfidfArtifactError(f"Artifact checksum mismatch: {name}.")
         ids = json.loads((target / "ordered_document_ids.json").read_text(encoding="utf-8"))
         vectorizer = joblib.load(target / "vectorizer.joblib")
         matrix = load_npz(target / "tfidf_matrix.npz").tocsr()
@@ -207,8 +268,6 @@ def load_tfidf_artifacts(directory: str | Path) -> TfidfArtifacts:
     except Exception as exc:
         raise InvalidTfidfArtifactError(f"Could not deserialize TF-IDF artifacts: {exc}") from exc
 
-    if not isinstance(manifest, dict) or manifest.get("format_version") != ARTIFACT_FORMAT_VERSION:
-        raise InvalidTfidfArtifactError("Unsupported or missing artifact format_version.")
     if not isinstance(ids, list) or any(
         isinstance(doc_id, bool) or not isinstance(doc_id, int) for doc_id in ids
     ):
@@ -225,8 +284,7 @@ def load_tfidf_artifacts(directory: str | Path) -> TfidfArtifacts:
         raise InvalidTfidfArtifactError("Document count does not match manifest.")
     if not isinstance(vectorizer, TfidfVectorizer):
         raise InvalidTfidfArtifactError("Saved vectorizer has an unexpected type.")
-    if matrix.shape[1] and matrix.shape[1] != len(vectorizer.get_feature_names_out()):
-        raise InvalidTfidfArtifactError("Matrix columns do not match vectorizer vocabulary.")
+    _validate_weights(vectorizer, matrix)
 
     revision = manifest.get("corpus_revision")
     if isinstance(revision, bool) or not isinstance(revision, int):

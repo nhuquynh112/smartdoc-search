@@ -2,6 +2,7 @@
 import re
 import unicodedata
 from dataclasses import dataclass
+from functools import lru_cache
 from underthesea import word_tokenize
 
 @dataclass(frozen=True)
@@ -48,23 +49,29 @@ def preprocess_text(text: str, config: PreprocessingConfig | None = None) -> str
     return preprocess_document(text, config).clean_text
 
 
+@lru_cache(maxsize=1)
+def _dependency_versions():
+    from importlib.metadata import version
+    return tuple(version(name) for name in ('underthesea', 'underthesea_core', 'pypdf', 'fonttools'))
+
+
 def pipeline_manifest(config: PreprocessingConfig | None = None) -> dict:
     """Fingerprint code rules and dependencies, including the actual stopword set."""
     import hashlib
     import json
     import unicodedata
-    from importlib.metadata import version
     config = config or PreprocessingConfig()
+    tokenizer_version, core_version, pdf_version, font_version = _dependency_versions()
     settings = {
         'rules_version': 1,  # Increment when normalization/segmentation rules change.
         'unicode': 'NFC', 'unicode_database': unicodedata.unidata_version,
         'lowercase': True, 'sentence_boundaries': '[.!?。！？;\\n]+',
         'segment_words': config.segment_words,
         'tokenizer': 'underthesea' if config.segment_words else 'whitespace',
-        'underthesea_version': version('underthesea'),
-        'underthesea_core_version': version('underthesea_core'),
-        'pdf_extractor_version': version('pypdf'),
-        'fonttools_version': version('fonttools'),
+        'underthesea_version': tokenizer_version,
+        'underthesea_core_version': core_version,
+        'pdf_extractor_version': pdf_version,
+        'fonttools_version': font_version,
         'remove_stopwords': config.remove_stopwords,
         'stopwords': sorted(config.stopwords) if config.remove_stopwords else [],
     }

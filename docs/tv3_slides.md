@@ -79,7 +79,7 @@ Nếu chưa có nhãn, đặt tên “Tiến độ thực nghiệm” và nói p
 ## Slide 10 — Hạn chế và bàn giao
 
 - Khớp từ vựng/OOV/đồng nghĩa; PDF ảnh chưa OCR.
-- File gốc cần storage; favorites/history theo phiên.
+- File gốc cần storage; favorites lưu PostgreSQL chung workspace, lịch sử theo phiên.
 - Feed: câu trả lời giảng viên hoặc còn chờ.
 - Hướng dẫn, test/checklist, CLI đánh giá, báo cáo/demo; ghép hồ sơ nhóm.
 

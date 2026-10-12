@@ -65,6 +65,7 @@ def app_environment(monkeypatch):
     # Import real module, then replace only its I/O API functions.
     import app.search_service
     import smartdoc.ingestion
+    import smartdoc.favorites
 
     st.cache_data.clear()
     st.cache_resource.clear()
@@ -73,7 +74,12 @@ def app_environment(monkeypatch):
     content = Mock(return_value="Xe điện dùng năng lượng sạch. <script>alert('x')</script>")
     ingest = Mock(side_effect=AssertionError("UI tests must not write to the database"))
     fake_service = FakeSearchService()
+    bookmarks = set()
+    monkeypatch.setattr(smartdoc.favorites, "load_saved_document_ids", lambda: sorted(bookmarks))
+    monkeypatch.setattr(smartdoc.favorites, "set_document_saved",
+                        lambda doc_id, desired: bookmarks.add(doc_id) if desired else bookmarks.discard(doc_id))
     monkeypatch.setattr(smartdoc.ingestion, "load_corpus_snapshot", snapshot)
+    monkeypatch.setattr(smartdoc.ingestion, "load_corpus_revision", lambda: snapshot.return_value['corpus_revision'])
     monkeypatch.setattr(smartdoc.ingestion, "get_documents_by_ids", metadata)
     monkeypatch.setattr(smartdoc.ingestion, "get_document_text", content)
     monkeypatch.setattr(smartdoc.ingestion, "ingest_document", ingest)
@@ -173,6 +179,65 @@ def test_favorite_button_and_saved_list_update_in_same_interaction(app_environme
     assert not [button for button in at.button if button.key == "fav_open_2"]
 
 
+def test_saved_documents_survive_fresh_ui_session(app_environment):
+    at = open_page("Thư viện")
+    at.button(key="list_star_2").click().run()
+    fresh = open_page("Đã lưu")
+    assert fresh.session_state["favorites"] == [2]
+    assert fresh.button(key="fav_open_2")
+
+
+def test_new_bookmark_displays_even_when_catalog_was_cached(app_environment, monkeypatch):
+    import smartdoc.favorites
+    _, snapshot, _, _ = app_environment
+    at = open_page('Thư viện')
+    added = {**deepcopy(DOCUMENTS[0]), 'document_id': 20, 'title': 'New document'}
+    snapshot.return_value = {'documents': [*deepcopy(DOCUMENTS), added], 'corpus_revision': 8}
+    monkeypatch.setattr('smartdoc.ingestion.get_documents_by_ids',
+                        lambda ids: [row for row in snapshot.return_value['documents'] if row['document_id'] in ids])
+    smartdoc.favorites.set_document_saved(20, True)
+    at.button(key='nav_Đã lưu').click().run()
+    assert not at.exception
+    assert at.button(key='fav_open_20')
+    assert 'Danh sách yêu thích đang trống' not in rendered_text(at)
+
+
+def test_catalog_refreshes_on_external_revision_change(app_environment):
+    _, snapshot, _, _ = app_environment
+    at = open_page('Thư viện')
+    snapshot.return_value['corpus_revision'] += 1
+    snapshot.return_value['documents'].append({**deepcopy(DOCUMENTS[0]), 'document_id': 20})
+    at.run()
+    assert not at.exception
+    assert at.button(key='list_open_20')
+    assert snapshot.call_count == 2
+
+
+def test_reader_save_keeps_content_and_persists_across_sessions(app_environment):
+    at = open_page("Thư viện")
+    at.button(key="list_open_2").click().run()
+    at.button(key="reader_star_2").click().run()
+    assert not at.exception
+    assert at.session_state["favorites"] == [2]
+    assert "năng lượng sạch" in rendered_text(at)
+    assert at.get("download_button")
+    fresh = open_page("Đã lưu")
+    assert fresh.button(key="fav_open_2")
+
+
+def test_failed_save_does_not_claim_success_or_lose_reader(app_environment, monkeypatch):
+    def fail(*args):
+        raise RuntimeError("database unavailable")
+    monkeypatch.setattr("smartdoc.favorites.set_document_saved", fail)
+    at = open_page("Thư viện")
+    at.button(key="list_open_2").click().run()
+    at.button(key="reader_star_2").click().run()
+    assert not at.exception
+    assert at.session_state["favorites"] == []
+    assert at.error
+    assert "năng lượng sạch" in rendered_text(at)
+
+
 def test_reader_loads_only_on_open_and_escapes_raw_html(app_environment):
     _, _, content, _ = app_environment
     at = submit_query(open_page())
@@ -191,6 +256,20 @@ def test_reader_loads_only_on_open_and_escapes_raw_html(app_environment):
     at.button(key="search_open_2").click().run()
     assert not at.exception
     assert "<mark>năng lượng</mark>" in rendered_text(at)
+
+
+def test_reader_reloads_text_when_backend_updates_same_document_id(app_environment):
+    _, _, content, _ = app_environment
+    content.return_value = "OLD_BODY_ABC"
+    at = open_page("Thư viện")
+    at.button(key="list_open_2").click().run()
+    assert "OLD_BODY_ABC" in rendered_text(at)
+    content.return_value = "NEW_BODY_XYZ"
+    at.button(key="list_open_2").click().run()
+    assert not at.exception
+    assert "NEW_BODY_XYZ" in rendered_text(at)
+    assert "OLD_BODY_ABC" not in rendered_text(at)
+    assert content.call_count == 2
 
 
 def test_library_finds_natural_phrase_in_segmented_content(app_environment):
@@ -335,7 +414,7 @@ def test_ranked_cards_show_safe_content_excerpt_and_actual_metadata(app_environm
     assert "Hạng 1 · Cosine 0.812345" in text
 
 
-def test_reader_rechecks_ready_document_after_external_delete_even_with_cached_content(app_environment, monkeypatch):
+def test_reader_rechecks_ready_document_after_external_delete(app_environment, monkeypatch):
     import smartdoc.ingestion
 
     _, _, content, _ = app_environment

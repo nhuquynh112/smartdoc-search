@@ -141,6 +141,7 @@ class IndexManager:
         self.versions_root = self.index_root / "versions"
         self.versions_root.mkdir(parents=True, exist_ok=True)
         self._snapshot_loader = snapshot_loader or _load_snapshot_default
+        self._loaded_cache = None
 
     @property
     def active_manifest_path(self) -> Path:
@@ -242,6 +243,15 @@ class IndexManager:
             if version_dir.parent != self.versions_root.resolve():
                 raise ValueError("artifact directory escapes versions directory")
 
+            def signature():
+                files = ("manifest.json", "vectorizer.joblib", "tfidf_matrix.npz", "ordered_document_ids.json")
+                return tuple((name, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns)
+                             for name in files for stat in [(version_dir / name).stat()])
+
+            key = (json.dumps(payload, sort_keys=True), signature())
+            if self._loaded_cache is not None and self._loaded_cache[0] == key:
+                return self._loaded_cache[1]
+
             artifacts = load_tfidf_artifacts(version_dir)
             if artifacts.corpus_revision != payload.get("corpus_revision"):
                 raise ValueError("active manifest revision does not match artifacts")
@@ -254,12 +264,16 @@ class IndexManager:
                 if artifacts.matrix.shape[1] > 0
                 else InvertedIndex(postings={}, ordered_document_ids=artifacts.ordered_document_ids, terms=())
             )
-            return ManagedIndex(
+            managed = ManagedIndex(
                 artifacts=artifacts,
                 inverted_index=inverted_index,
                 version_id=version_id,
                 directory=version_dir,
             )
+            if signature() != key[1]:
+                raise ValueError("artifact files changed during loading")
+            self._loaded_cache = (key, managed)
+            return managed
         except NoActiveIndexError:
             raise
         except Exception as exc:

@@ -29,11 +29,14 @@ from app.result_utils import ranked_results_csv
 from app.ui_theme import apply_theme
 from app.search_service import SearchService
 from app.upload_service import process_uploads
+from smartdoc.favorites import load_saved_document_ids, set_document_saved
+from smartdoc.document_loader import MAX_PDF_PAGES, MAX_EXTRACTED_CHARACTERS
 from smartdoc.ingestion import (
     get_document_text,
     get_documents_by_ids,
     ingest_document,
     load_corpus_snapshot,
+    load_corpus_revision,
 )
 
 
@@ -78,19 +81,13 @@ def esc(value: object) -> str:
 
 
 @st.cache_data(ttl=600, show_spinner=False)
-def get_catalog() -> tuple[list[dict], int]:
+def get_catalog(revision: int) -> tuple[list[dict], int]:
     """Fetch a consistent snapshot; cache between page/filter interactions."""
     snapshot = load_corpus_snapshot(None)
     ids = [int(item["document_id"]) for item in snapshot["documents"]]
     metadata = {int(row["document_id"]): row for row in get_documents_by_ids(ids)}
     docs = [{**row, **metadata.get(int(row["document_id"]), {})} for row in snapshot["documents"]]
     return docs, int(snapshot["corpus_revision"])
-
-
-@st.cache_data(ttl=600, show_spinner=False)
-def cached_content(document_id: int) -> str:
-    """Only query raw document text when a reader actually opens a document."""
-    return get_document_text(document_id)
 
 
 @st.cache_resource(show_spinner=False)
@@ -100,7 +97,6 @@ def search_service() -> SearchService:
 
 def clear_document_cache() -> None:
     get_catalog.clear()
-    cached_content.clear()
     st.session_state.pop("ranked_search", None)
 
 
@@ -118,6 +114,7 @@ def safe_error(exc: object) -> str:
 
 def go(page: str) -> None:
     st.session_state["active_page"] = page
+    st.session_state.pop("active_reader", None)
     st.rerun()
 
 
@@ -161,13 +158,27 @@ def saved(doc_id: int) -> bool:
 
 def toggle_saved(doc_id: int) -> None:
     items = set(st.session_state["favorites"])
-    if doc_id in items:
-        items.remove(doc_id)
-        st.toast("Đã bỏ khỏi danh sách yêu thích")
-    else:
+    desired = doc_id not in items
+    try:
+        set_document_saved(doc_id, desired)
+    except Exception as exc:
+        st.session_state["save_notice"] = ("error", f"Không thể lưu thay đổi: {safe_error(exc)}")
+        return
+    if desired:
         items.add(doc_id)
-        st.toast("Đã lưu tài liệu")
+    else:
+        items.discard(doc_id)
     st.session_state["favorites"] = sorted(items)
+    # Emit notifications in the dialog body, never from its fragment callback.
+    st.session_state["save_notice"] = ("success", "Đã lưu tài liệu vào thư viện." if desired
+                                       else "Đã bỏ khỏi danh sách đã lưu.")
+
+
+def save_notice() -> None:
+    notice = st.session_state.pop("save_notice", None)
+    if notice:
+        level, message = notice
+        (st.error if level == "error" else st.success)(message)
 
 
 def record_read(doc_id: int) -> None:
@@ -272,12 +283,16 @@ def highlight_content(text: str, phrase: str) -> tuple[str, int]:
     return "".join(parts), len(matches)
 
 
-@st.dialog("Không gian đọc tài liệu", width="large")
+def close_reader() -> None:
+    st.session_state.pop("active_reader", None)
+
+
+@st.dialog("Không gian đọc tài liệu", width="large", on_dismiss=close_reader)
 def reader(doc: dict) -> None:
     doc_id = int(doc["document_id"])
-    # Library metadata and raw text may be cached, but a deleted/non-ready
-    # document must not be reopened through either cached path.
+    # Library metadata may be cached. Recheck readiness before opening a reader.
     try:
+        st.session_state["favorites"] = load_saved_document_ids()
         current = get_documents_by_ids([doc_id])
     except Exception as exc:
         st.error(f"Không đọc được tài liệu: {safe_error(exc)}")
@@ -286,7 +301,6 @@ def reader(doc: dict) -> None:
             or not isinstance(current[0], dict)
             or type(current[0].get("document_id")) is not int
             or current[0]["document_id"] != doc_id):
-        cached_content.clear(doc_id)
         st.warning("Tài liệu không còn sẵn sàng trong thư viện. Hãy làm mới thư viện rồi chọn tài liệu khác.")
         return
     doc = {**doc, **current[0]}
@@ -300,8 +314,11 @@ def reader(doc: dict) -> None:
         src = str(doc.get("source_uri") or "")
         if src.startswith(("https://", "http://")):
             st.link_button("↗ Nguồn tài liệu", src, width="stretch")
+    save_notice()
     try:
-        content = cached_content(doc_id)
+        # A CLI reprocess can change raw_text without changing the document ID.
+        # Read on demand rather than retaining text across reader openings.
+        content = get_document_text(doc_id)
     except Exception as exc:
         st.error(f"Không đọc được tài liệu: {safe_error(exc)}")
         return
@@ -311,6 +328,8 @@ def reader(doc: dict) -> None:
         highlighted, matches = highlight_content(content or "", phrase)
         if phrase.strip():
             st.caption(f"Tìm thấy {matches} vị trí trùng khớp chính xác.")
+            if matches > 300:
+                st.caption("Tô sáng 300 vị trí đầu tiên để giữ trang đọc mượt.")
         # Long documents remain readable; full raw text is always available below.
         st.markdown(f'<div class="sd-article">{highlighted}</div>', unsafe_allow_html=True)
         st.download_button("↓ Tải nội dung TXT", (content or "").encode("utf-8"),
@@ -327,7 +346,7 @@ def reader(doc: dict) -> None:
 
 def open_reader(doc: dict) -> None:
     record_read(int(doc["document_id"]))
-    reader(doc)
+    st.session_state["active_reader"] = doc
 
 
 def document_item(doc: dict, context: str, *, grid_mode: bool = False,
@@ -415,7 +434,7 @@ def dashboard(docs: list[dict], revision: int) -> None:
         if st.button("Khám phá toàn bộ tài liệu  →", key="go_lib", width="stretch"):
             go("Thư viện")
         st.markdown('<div class="sd-feature"><div class="sd-feature-icon">♡</div><div class="sd-feature-title">Bộ sưu tập yêu thích</div>'
-                    '<div class="sd-feature-desc">Những tài liệu bạn đánh dấu sẽ xuất hiện ở đây trong phiên sử dụng.</div></div>', unsafe_allow_html=True)
+                    '<div class="sd-feature-desc">Những tài liệu bạn đánh dấu được lưu lại để mở vào lần sau.</div></div>', unsafe_allow_html=True)
         if st.button(f"Xem đã lưu ({len(st.session_state['favorites'])})  →", key="go_saved", width="stretch"):
             go("Đã lưu")
     with r:
@@ -617,7 +636,7 @@ def library_page(docs: list[dict]) -> None:
 
 
 def favorites_page(docs: list[dict]) -> None:
-    title("KHÔNG GIAN CÁ NHÂN", "Đã lưu & vừa đọc", "Giữ những tài liệu quan trọng luôn trong tầm tay trong phiên sử dụng này.")
+    title("KHÔNG GIAN CÁ NHÂN", "Đã lưu & vừa đọc", "Tài liệu đã lưu được giữ lại khi tải lại trang.")
     indexed = {int(doc["document_id"]): doc for doc in docs}
     favorites = [indexed[doc_id] for doc_id in st.session_state["favorites"] if doc_id in indexed]
     history = recent_docs(docs)
@@ -640,7 +659,7 @@ def favorites_page(docs: list[dict]) -> None:
                 document_item(doc, "hist")
         else:
             st.info("Chưa có tài liệu nào được mở trong phiên này.")
-    st.caption("Yêu thích và lịch sử đọc được giữ trong phiên trình duyệt hiện tại, không lưu vào tài khoản hay database.")
+    st.caption("Danh sách đã lưu được giữ trong PostgreSQL và dùng chung cho workspace local. Lịch sử đọc chỉ giữ trong phiên hiện tại.")
 
 
 def upload_page() -> None:
@@ -654,6 +673,7 @@ def upload_page() -> None:
     uploaded_files = st.file_uploader("Chọn tài liệu", type=["pdf", "txt"], accept_multiple_files=True,
                                       help="PDF ảnh scan không có lớp văn bản sẽ không được hỗ trợ.",
                                       key="upload_files", max_upload_size=8)
+    st.caption(f"PDF tối đa {MAX_PDF_PAGES} trang; nội dung trích xuất tối đa {MAX_EXTRACTED_CHARACTERS:,} ký tự mỗi tài liệu.")
     group = st.text_input("Chủ đề cho tài liệu mới", value="Tài liệu cá nhân", max_chars=70)
     if uploaded_files:
         st.caption(f"Đã chọn {len(uploaded_files)} tài liệu. Nhấn nút bên dưới để lưu.")
@@ -703,6 +723,13 @@ def analytics_page(docs: list[dict], revision: int) -> None:
             "chưa có kết quả nghiệm thu chất lượng. Xem hướng dẫn đánh giá trong tài liệu dự án.")
 
 
+try:
+    st.session_state["favorites"] = load_saved_document_ids()
+except Exception as exc:
+    st.session_state["favorites"] = []
+    st.warning(f"Chưa đọc được danh sách đã lưu: {safe_error(exc)}")
+save_notice()
+
 # Sidebar controls stay native Streamlit widgets; CSS is presentation only.
 with st.sidebar:
     st.markdown('<div class="sd-brand"><div class="sd-logo">✦</div><div>'
@@ -735,10 +762,16 @@ if page == "Tải lên":
 elif page == "Tìm kiếm":
     # Retrieval handles its own fresh snapshot; do not load a cached full catalog first.
     search_page()
+elif page == "Đã lưu":
+    try:
+        ids = sorted(set(st.session_state["favorites"] + st.session_state["reading_history"]))
+        favorites_page(get_documents_by_ids(ids))
+    except Exception as exc:
+        st.error(f"Chưa đọc được tài liệu đã lưu: {safe_error(exc)}")
 else:
     try:
         with st.spinner("Đang đồng bộ thư viện..."):
-            documents, corpus_revision = get_catalog()
+            documents, corpus_revision = get_catalog(load_corpus_revision())
     except Exception as exc:
         title("KẾT NỐI", "Chưa thể mở thư viện", "Hãy kiểm tra dịch vụ dữ liệu rồi thử làm mới.")
         st.error(safe_error(exc))
@@ -753,5 +786,8 @@ else:
         favorites_page(documents)
     elif page == "Phân tích":
         analytics_page(documents, corpus_revision)
+
+if st.session_state.get("active_reader"):
+    reader(st.session_state["active_reader"])
 
 st.markdown('<div class="sd-footer">SmartDoc Pro · Lưu trữ thông minh, khám phá liền mạch</div>', unsafe_allow_html=True)

@@ -15,6 +15,7 @@ from typing import Any
 from smartdoc.index_manager import IndexManager, ManagedIndex, NoActiveIndexError
 from smartdoc.inverted_index import get_candidates, get_postings
 from smartdoc.retrieval_engine import InvalidRetrievalInputError, MAX_TOP_K, RetrievalEngine
+from app.snapshot_cache import RevisionSnapshotCache
 
 
 _OPERATIONS_LOCK = RLock()
@@ -58,7 +59,7 @@ class SearchService:
         preprocessing_fn: Callable[[str], str] | None = None,
     ) -> None:
         self.corpus_name = corpus_name
-        self.snapshot_loader = snapshot_loader or _snapshot_loader
+        self.snapshot_loader = snapshot_loader if snapshot_loader is not None else RevisionSnapshotCache()
         self.metadata_loader = metadata_loader or _metadata_loader
         self.preprocessing_fn = preprocessing_fn
         self.mutation_lock = _OPERATIONS_LOCK

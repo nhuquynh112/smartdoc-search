@@ -5,8 +5,9 @@ from pathlib import Path
 from unittest.mock import patch
 from smartdoc.db import connect
 from smartdoc.ingestion import ingest_document, delete_document, load_corpus_snapshot
+from tests.database_safety import DisposableDatabaseTestCase
 
-class IngestionIntegrationTests(unittest.TestCase):
+class IngestionIntegrationTests(DisposableDatabaseTestCase):
     def test_ready_duplicate_failed_and_delete(self):
         ids = []
         with tempfile.TemporaryDirectory() as folder:

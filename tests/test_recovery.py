@@ -6,8 +6,9 @@ from smartdoc.db import connect
 from smartdoc.ingestion import ingest_document,delete_document
 from smartdoc.storage_adapter import LocalStorage
 from smartdoc.recovery import reconcile_storage
+from tests.database_safety import DisposableDatabaseTestCase
 
-class RecoveryTests(unittest.TestCase):
+class RecoveryTests(DisposableDatabaseTestCase):
     def test_storage_failure_retry_keeps_id(self):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder); source=root/'sample.txt'

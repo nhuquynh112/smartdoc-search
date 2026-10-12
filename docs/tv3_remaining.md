@@ -64,6 +64,14 @@ Upload/rebuild/search/reader/TXT và CSV download, Top-5/10/20, query rỗng/OOV
 
 Xác nhận với giảng viên nghĩa của “feed” và ghi đúng trạng thái yêu cầu lưu trữ. Nhận báo cáo corpus/nguồn/schema từ thành viên 1 và ví dụ tính tay/đối chiếu thuật toán từ thành viên 2. Sau khi có metric và bằng chứng cuối, người dùng sẽ yêu cầu ghép báo cáo/slide; cả nhóm luyện demo và chuẩn bị backup dữ liệu/index phù hợp với corpus đã đóng băng.
 
-Máy hiện đọc được text/metadata của 200 bài từ PostgreSQL nhưng thiếu các file gốc được tham chiếu. Tải TXT từ reader đã kiểm tra; nếu bảo vệ cần tải PDF nguồn, phải lấy `storage/originals` tương ứng từ nhóm và kiểm tra hash/reference theo hướng dẫn chuyển dữ liệu. Không mô tả việc này đã được sửa bằng UI.
+Ngày 11/10 máy nghiệm thu đọc được text/metadata nhưng thiếu file gốc. Audit mới ngày 12/10 trên máy local hiện tại xác nhận **200 tài liệu TXT có original/cache và đạt hash/kích thước/text-cache checks** (`reports/data_quality_summary.json`). Đây là tình trạng của máy này; chuyển DB/storage sang máy bảo vệ vẫn cần kiểm tra riêng. Corpus hiện không chứa PDF gốc; không hứa tải PDF nguồn từ các bài TXT. Reader xuất nội dung TXT từ DB.
+
+Sau rà soát 12/10, có bộ nhãn trắng mới tại `reports/tv3_labeling_2026_10_12`, snapshot tại `reports/tv2_news_corpus_2026_10_12.json`; giữ nguyên `evaluation/` cũ. Trong trang `app/review.py`, đặt **Thư mục bộ đánh giá** thành đường dẫn thư mục mới để đọc/gán nhãn. Bộ mới dùng query nháp cũ và revision lúc xuất; không tự duyệt hoặc tạo nhãn. Không thay đổi DB đánh giá trong lúc làm việc. Chạy metric sau khi người thật duyệt/gán đủ:
+
+```bash
+python -m scripts.evaluate_retrieval --source snapshot --snapshot reports/tv2_news_corpus_2026_10_12.json --evaluation-dir reports/tv3_labeling_2026_10_12 --rebuild --repeats 5
+```
+
+Artifact TF-IDF mới dùng format 2 với SHA-256 từng file và validation số học/cấu hình. Format 1 vẫn đọc được nếu hợp lệ; rebuild để bổ sung checksum. Reader đọc raw_text trực tiếp mỗi lần mở để nhận thay đổi từ reprocess cùng ID. Mutation tests ingestion/recovery/upload chỉ được chạy khi marker và DB đích khớp runner isolated, cả khi dùng pytest hoặc unittest.
 
 Ưu tiên hiện tại là nhãn đúng, tái lập được, bằng chứng rõ và demo ổn định. OCR, chatbot, embedding, tài khoản hoặc tìm kiếm ngữ nghĩa chưa cần cho nghiệm thu TV3 theo phân công; chỉ cân nhắc khi có thời gian và cách đo lợi ích trên tập đánh giá thật.

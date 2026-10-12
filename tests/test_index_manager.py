@@ -97,3 +97,50 @@ def test_empty_snapshot_can_be_indexed(tmp_path):
     result = manager.build_and_activate("news")
     assert result.artifacts.document_count == 0
     assert result.inverted_index.postings == {}
+
+
+def test_invalid_weights_during_rebuild_preserve_active_index(tmp_path, monkeypatch):
+    import smartdoc.index_manager as module
+
+    manager = IndexManager(tmp_path, snapshot_loader=lambda name: snapshot())
+    first = manager.build_and_activate("news")
+    manifest = manager.active_manifest_path.read_bytes()
+    real_fit = module.fit_tfidf
+
+    def corrupt_fit(*args, **kwargs):
+        artifacts = real_fit(*args, **kwargs)
+        artifacts.matrix.data *= 3
+        return artifacts
+
+    monkeypatch.setattr(module, "fit_tfidf", corrupt_fit)
+    with pytest.raises(IndexBuildError):
+        manager.build_and_activate("news")
+    assert manager.active_manifest_path.read_bytes() == manifest
+    assert manager.load_active().version_id == first.version_id
+    assert not list(manager.versions_root.glob(".staging-*"))
+
+
+def test_cached_index_reused_and_disk_changes_still_rejected(tmp_path, monkeypatch):
+    import smartdoc.index_manager as module
+    from unittest.mock import Mock
+
+    manager = IndexManager(tmp_path, snapshot_loader=lambda name: snapshot())
+    manager.build_and_activate()
+    loader = Mock(wraps=module.load_tfidf_artifacts)
+    monkeypatch.setattr(module, "load_tfidf_artifacts", loader)
+    first = manager.load_active()
+    assert manager.load_active() is first
+    assert loader.call_count == 1
+    with (first.directory / 'tfidf_matrix.npz').open('ab') as stream:
+        stream.write(b'changed')
+    with pytest.raises(IndexBuildError, match='checksum mismatch'):
+        manager.load_active()
+
+
+def test_rebuild_replaces_cached_index_even_with_same_revision(tmp_path):
+    manager = IndexManager(tmp_path, snapshot_loader=lambda name: snapshot())
+    first = manager.build_and_activate()
+    manager.load_active()
+    second = manager.build_and_activate()
+    assert first.version_id != second.version_id
+    assert manager.load_active().version_id == second.version_id

@@ -1,4 +1,10 @@
 import pytest
+import hashlib
+import json
+
+import joblib
+import numpy as np
+from scipy.sparse import save_npz
 
 from smartdoc.tfidf_engine import (
     InvalidTrainingCorpusError,
@@ -94,3 +100,75 @@ def test_corrupt_manifest_rejected(tmp_path):
     (directory / "manifest.json").write_text('{"format_version": 999}', encoding="utf-8")
     with pytest.raises(InvalidTfidfArtifactError):
         load_tfidf_artifacts(directory)
+
+
+def refresh_checksums(directory):
+    """Exercise semantic validation independently of byte integrity checks."""
+    path = directory / "manifest.json"
+    manifest = json.loads(path.read_text())
+    for name in manifest["sha256"]:
+        manifest["sha256"][name] = hashlib.sha256((directory / name).read_bytes()).hexdigest()
+    path.write_text(json.dumps(manifest))
+
+
+@pytest.mark.parametrize("weight", [float("nan"), float("inf"), -1.0, 3.0, 0.0])
+def test_invalid_persisted_weights_rejected_even_with_matching_checksums(tmp_path, weight):
+    artifacts = fit_tfidf([{"document_id": 1, "clean_text": "xe_điện"}], corpus_revision=1)
+    save_tfidf_artifacts(artifacts, tmp_path)
+    artifacts.matrix.data[:] = weight
+    save_npz(tmp_path / "tfidf_matrix.npz", artifacts.matrix)
+    refresh_checksums(tmp_path)
+    with pytest.raises(InvalidTfidfArtifactError):
+        load_tfidf_artifacts(tmp_path)
+
+
+@pytest.mark.parametrize("name", ["vectorizer.joblib", "tfidf_matrix.npz", "ordered_document_ids.json"])
+def test_changed_bytes_rejected_before_deserialization(tmp_path, monkeypatch, name):
+    save_tfidf_artifacts(fit_tfidf(sample_docs(), corpus_revision=1), tmp_path)
+    with (tmp_path / name).open("ab") as stream:
+        stream.write(b"corrupt")
+    monkeypatch.setattr(joblib, "load", lambda path: pytest.fail("Must verify checksums before joblib.load"))
+    with pytest.raises(InvalidTfidfArtifactError, match="checksum mismatch"):
+        load_tfidf_artifacts(tmp_path)
+
+
+@pytest.mark.parametrize("change", ["idf", "norm", "vocabulary"])
+def test_incompatible_vectorizer_rejected(tmp_path, change):
+    artifacts = fit_tfidf(sample_docs(), corpus_revision=1)
+    save_tfidf_artifacts(artifacts, tmp_path)
+    if change == "idf":
+        artifacts.vectorizer.idf_ = np.full(artifacts.matrix.shape[1], np.nan)
+    elif change == "norm":
+        artifacts.vectorizer.set_params(norm=None)
+    else:
+        term = next(iter(artifacts.vectorizer.vocabulary_))
+        artifacts.vectorizer.vocabulary_[term] = 999
+    joblib.dump(artifacts.vectorizer, tmp_path / "vectorizer.joblib")
+    refresh_checksums(tmp_path)
+    with pytest.raises(InvalidTfidfArtifactError):
+        load_tfidf_artifacts(tmp_path)
+
+
+@pytest.mark.parametrize("documents", [[], [{"document_id": 1, "clean_text": " "}],
+                                       [{"document_id": 1, "clean_text": ""},
+                                        {"document_id": 2, "clean_text": "xe_điện"}]])
+def test_zero_vectors_remain_valid(tmp_path, documents):
+    original = fit_tfidf(documents, corpus_revision=1)
+    save_tfidf_artifacts(original, tmp_path)
+    loaded = load_tfidf_artifacts(tmp_path)
+    assert loaded.matrix.shape == original.matrix.shape
+
+
+def test_legacy_artifacts_still_validate_numeric_weights(tmp_path):
+    artifacts = fit_tfidf([{"document_id": 1, "clean_text": "xe_điện"}], corpus_revision=1)
+    save_tfidf_artifacts(artifacts, tmp_path)
+    path = tmp_path / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["format_version"] = 1
+    manifest.pop("sha256")
+    path.write_text(json.dumps(manifest))
+    assert load_tfidf_artifacts(tmp_path).document_count == 1
+    artifacts.matrix.data *= 3
+    save_npz(tmp_path / "tfidf_matrix.npz", artifacts.matrix)
+    with pytest.raises(InvalidTfidfArtifactError):
+        load_tfidf_artifacts(tmp_path)

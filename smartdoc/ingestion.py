@@ -73,10 +73,15 @@ def load_corpus_snapshot(corpus_name=None):
 def load_documents_for_index():
     return load_corpus_snapshot()['documents']
 
+def load_corpus_revision():
+    """Cheap uncached freshness check; a single statement sees one DB snapshot."""
+    with connect() as conn:
+        return conn.execute('SELECT revision FROM corpus_state WHERE singleton').fetchone()['revision']
+
 def get_documents_by_ids(ids):
     if not ids: return []
     with connect() as conn:
-        rows = conn.execute("SELECT id AS document_id,title,source_uri,storage_ref,word_count FROM documents WHERE id=ANY(%s) AND ingest_status='ready'", (list(ids),)).fetchall()
+        rows = conn.execute("SELECT id AS document_id,title,source_uri,storage_ref,word_count,category,corpus_name,clean_text FROM documents WHERE id=ANY(%s) AND ingest_status='ready'", (list(ids),)).fetchall()
     by_id = {r['document_id']: r for r in rows}
     return [by_id[i] for i in ids if i in by_id]
 

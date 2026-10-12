@@ -1,24 +1,19 @@
 """Real TXT/PDF upload tests; enabled only by the disposable-database runner."""
 import io
-import os
 from types import SimpleNamespace
 
 import pytest
-from psycopg.conninfo import conninfo_to_dict
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
 from app.upload_service import process_uploads
-from smartdoc.config import database_url
 from smartdoc.ingestion import get_document_text, ingest_document
+from tests.database_safety import require_disposable_database as check_disposable_database
 
 
 @pytest.fixture(autouse=True)
 def require_disposable_database():
-    expected = os.environ.get("SMARTDOC_ISOLATED_TEST_DB", "")
-    if not expected.startswith("smartdoc_tv3_test_"):
-        pytest.skip("Run via python -m scripts.test_tv3_isolated_database.")
-    assert conninfo_to_dict(database_url())["dbname"] == expected
+    check_disposable_database()
 
 
 def pdf_payload(text=None):
