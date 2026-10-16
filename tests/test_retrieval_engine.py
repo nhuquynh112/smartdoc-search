@@ -188,3 +188,21 @@ def test_explain_result_respects_stale_index_guard(tmp_path):
     explanation = engine.explain_result("alpha", 1)
     assert explanation["status"] == "stale_index"
     assert explanation["matched_terms"] == []
+
+
+@pytest.mark.parametrize("revision", [7, 8])
+def test_explanation_rejects_index_switched_after_search(tmp_path, monkeypatch, revision):
+    engine, manager, ref = make_engine(tmp_path)
+    first = manager.build_and_activate()
+    ref["value"] = make_snapshot(revision=revision, documents=[
+        {"document_id": 1, "clean_text": "alpha alpha beta"},
+        {"document_id": 2, "clean_text": "beta gamma"},
+    ])
+    second = manager.build_and_activate()
+    ref["value"] = make_snapshot()
+    versions = iter([first, second])
+    monkeypatch.setattr(manager, "load_active", lambda: next(versions))
+    result = engine.explain_result("alpha", 1)
+    assert result["status"] == "stale_index"
+    assert result["score"] is None
+    assert result["matched_terms"] == []

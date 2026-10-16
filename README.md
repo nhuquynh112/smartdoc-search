@@ -421,7 +421,7 @@ python -m scripts.ingest_documents data/samples
 python -m scripts.check_db
 ```
 
-The importer reports `ready`, `duplicate`, or `failed` per file. It saves originals and processed text outside Git, generates metadata, and increments the corpus revision for new ready documents. Failed records do not enter the index. A failed file with the same hash can be retried using `--retry-failed`, preserving its ID and metadata. Ready documents remain duplicates and are not overwritten. If the file bytes change, the new hash represents a new document. The included sample is self-authored integration data, not a labeled evaluation corpus.
+The importer reports `ready`, `duplicate`, or `failed` per file. It saves originals and processed text outside Git, generates metadata, and increments the corpus revision for new ready documents. Failed records do not enter the index. A failed file with the same hash can be retried using `--retry-failed`, preserving its ID and descriptive metadata. If a retry corrects the file extension, a successful ingestion updates `file_type` to match the loader and stored original; failed retries do not change it. Ready documents remain duplicates and are not overwritten. If the file bytes change, the new hash represents a new document. The included sample is self-authored integration data, not a labeled evaluation corpus.
 
 ```bash
 python -m scripts.ingest_documents path/to/file.pdf --retry-failed

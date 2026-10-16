@@ -242,6 +242,11 @@ class IndexManager:
             version_dir = (self.index_root / relative_dir).resolve()
             if version_dir.parent != self.versions_root.resolve():
                 raise ValueError("artifact directory escapes versions directory")
+            if version_dir.name != version_id:
+                raise ValueError("artifact directory does not match version_id")
+            document_count = payload.get("document_count")
+            if isinstance(document_count, bool) or not isinstance(document_count, int) or document_count < 0:
+                raise ValueError("invalid document count in active manifest")
 
             def signature():
                 files = ("manifest.json", "vectorizer.joblib", "tfidf_matrix.npz", "ordered_document_ids.json")
@@ -253,6 +258,8 @@ class IndexManager:
                 return self._loaded_cache[1]
 
             artifacts = load_tfidf_artifacts(version_dir)
+            if artifacts.document_count != document_count:
+                raise ValueError("active manifest document count does not match artifacts")
             if artifacts.corpus_revision != payload.get("corpus_revision"):
                 raise ValueError("active manifest revision does not match artifacts")
             if artifacts.preprocessing_fingerprint != payload.get("preprocessing_fingerprint"):

@@ -52,8 +52,10 @@ def ingest_document(path, source_uri=None, *, title=None, corpus_name="integrati
             if cleanup_errors: error += '; cleanup required: ' + ', '.join(cleanup_errors)
             conn.execute("UPDATE documents SET ingest_status='failed',error_message=%s WHERE id=%s", (error, doc_id))
             return {'document_id': doc_id, 'status': 'failed', 'error': error}
-        conn.execute("""UPDATE documents SET ingest_status='ready',word_count=%s,storage_ref=%s,text_ref=%s, preprocessing_version=%s, preprocessing_config=%s, processed_at=now(),error_message=NULL,raw_text=%s,clean_text=%s
-                        WHERE id=%s""", (processed.word_count, original_ref, text_ref, manifest['fingerprint'], Jsonb(manifest['settings']), raw_text, processed.clean_text, doc_id))
+        # A failed upload can be retried with a corrected extension. Persist the
+        # successful loader's type together with its storage reference.
+        conn.execute("""UPDATE documents SET ingest_status='ready',file_type=%s,word_count=%s,storage_ref=%s,text_ref=%s, preprocessing_version=%s, preprocessing_config=%s, processed_at=now(),error_message=NULL,raw_text=%s,clean_text=%s
+                        WHERE id=%s""", (meta['file_type'], processed.word_count, original_ref, text_ref, manifest['fingerprint'], Jsonb(manifest['settings']), raw_text, processed.clean_text, doc_id))
         conn.execute('UPDATE corpus_state SET revision=revision+1 WHERE singleton')
         return {'document_id': doc_id, 'status': 'ready', 'word_count': processed.word_count}
 

@@ -5,14 +5,20 @@ import json
 import subprocess
 from pathlib import Path
 from smartdoc.config import PROJECT_ROOT
-from smartdoc.db import connect
 
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('backup',type=Path)
     args=p.parse_args()
-    manifest=json.loads(args.backup.with_suffix('.manifest.json').read_text())
+    manifest_path=args.backup.with_name(args.backup.name+'.manifest.json')
+    try:
+        manifest_text=manifest_path.read_text(encoding='utf-8')
+    except FileNotFoundError:
+        # Older team backups used a suffix-replacing sidecar name. Only fall
+        # back when the new sidecar is absent, never on invalid data/checksums.
+        manifest_text=args.backup.with_suffix('.manifest.json').read_text(encoding='utf-8')
+    manifest=json.loads(manifest_text)
     if hashlib.sha256(args.backup.read_bytes()).hexdigest()!=manifest['sha256']:
         p.error('Backup checksum mismatch.')
     # Check the actual Compose target, not a possibly different host DATABASE_URL.

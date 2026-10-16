@@ -10,7 +10,7 @@ With Docker PostgreSQL running:
 python -m scripts.backup_database
 ```
 
-Send both `reports/smartdoc.dump` and `reports/smartdoc.manifest.json`. These files are ignored by Git. The script refuses to replace an existing backup; use `--output reports/smartdoc_v2.dump` for the next version. Backups preserve IDs and revision consistently using PostgreSQL's snapshot behavior.
+Send both `reports/smartdoc.dump` and `reports/smartdoc.dump.manifest.json`. These files are ignored by Git. The script refuses to replace an existing backup; use `--output reports/smartdoc_v2.dump` for the next version. Each archive keeps its full filename in the manifest name, so `snapshot.dump` and `snapshot.backup` have separate manifests. Restore also accepts the legacy `smartdoc.manifest.json` name when the new sidecar is absent; a checksum failure never falls back to the legacy file. If a `.tmp` file already exists, backup stops without deleting it. Confirm its writer has stopped before handling a leftover temporary file. Backups preserve IDs and revision consistently using PostgreSQL's snapshot behavior.
 
 ## Teammate: restore on Ubuntu or Windows
 

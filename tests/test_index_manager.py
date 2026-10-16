@@ -144,3 +144,27 @@ def test_rebuild_replaces_cached_index_even_with_same_revision(tmp_path):
     second = manager.build_and_activate()
     assert first.version_id != second.version_id
     assert manager.load_active().version_id == second.version_id
+
+
+@pytest.mark.parametrize("count", [999, True, "3", None, -1])
+def test_active_manifest_rejects_invalid_document_count(tmp_path, count):
+    manager = IndexManager(tmp_path, snapshot_loader=lambda name: snapshot())
+    manager.build_and_activate()
+    manager.load_active()  # A cached valid load must not hide manifest corruption.
+    payload = json.loads(manager.active_manifest_path.read_text())
+    payload["document_count"] = count
+    manager.active_manifest_path.write_text(json.dumps(payload))
+    with pytest.raises(IndexBuildError, match="document count"):
+        manager.load_active()
+
+
+def test_active_manifest_rejects_directory_of_another_version(tmp_path):
+    manager = IndexManager(tmp_path, snapshot_loader=lambda name: snapshot())
+    first = manager.build_and_activate()
+    manager.build_and_activate()
+    manager.load_active()
+    payload = json.loads(manager.active_manifest_path.read_text())
+    payload["version_id"] = first.version_id
+    manager.active_manifest_path.write_text(json.dumps(payload))
+    with pytest.raises(IndexBuildError, match="version_id"):
+        manager.load_active()

@@ -33,6 +33,37 @@ class RecoveryTests(DisposableDatabaseTestCase):
                     self.assertIsNone(row['error_message']);self.assertTrue(row['raw_text'] and row['clean_text'])
                 finally:
                     for i in ids:delete_document(i)
+    def test_retry_corrected_extension_persists_loader_type(self):
+        from smartdoc.document_loader import load_document_bytes
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            wrong = root / 'wrong.pdf'
+            text = 'Kiểm thử phục hồi dữ liệu ' + root.name
+            wrong.write_text(text, encoding='utf-8')
+            corrected = root / 'corrected.txt'
+            corrected.write_bytes(wrong.read_bytes())
+            storage = LocalStorage(root / 'storage')
+            with patch('smartdoc.ingestion.LocalStorage', return_value=storage):
+                failed = ingest_document(wrong, title='Original title')
+                try:
+                    self.assertEqual(failed['status'], 'failed')
+                    retried = ingest_document(corrected, retry_failed=True)
+                    self.assertEqual(retried['status'], 'ready')
+                    self.assertEqual(retried['document_id'], failed['document_id'])
+                    with connect() as conn:
+                        row = conn.execute(
+                            'SELECT file_type,storage_ref,title FROM documents WHERE id=%s',
+                            (retried['document_id'],)).fetchone()
+                    self.assertEqual(row['file_type'], 'txt')
+                    self.assertEqual(row['title'], 'Original title')
+                    self.assertEqual(Path(row['storage_ref']).suffix, '.txt')
+                    # Reprocessing selects its loader using this persisted type.
+                    self.assertEqual(load_document_bytes(
+                        storage.resolve(row['storage_ref']).read_bytes(),
+                        '.' + row['file_type']), text)
+                finally:
+                    delete_document(failed['document_id'])
+
     def test_quarantine_preserves_files(self):
         with tempfile.TemporaryDirectory() as folder:
             storage=LocalStorage(folder)

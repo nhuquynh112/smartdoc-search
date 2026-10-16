@@ -302,6 +302,13 @@ class RetrievalEngine:
         try:
             managed_index = self.index_manager.load_active()
             artifacts = managed_index.artifacts
+            # Activation can change between search and explanation, including
+            # a rebuild at the same corpus revision. Never mix their scores.
+            if (managed_index.version_id != search_response["index_version"]
+                    or artifacts.corpus_revision != search_response["corpus_revision"]):
+                base["status"] = "stale_index"
+                base["message"] = "Chỉ mục đã thay đổi; vui lòng tìm kiếm lại trước khi xem giải thích."
+                return base
             try:
                 row_index = artifacts.ordered_document_ids.index(document_id)
             except ValueError:
